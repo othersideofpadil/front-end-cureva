@@ -39,7 +39,7 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-indigo-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-linear-to-br from-sky-50 via-white to-indigo-50 flex items-center justify-center p-4">
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-sky-200 rounded-full opacity-30 blur-3xl" />
@@ -67,7 +67,7 @@ const ForgotPassword = () => {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-            className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-sky-500 to-indigo-500 rounded-2xl shadow-lg shadow-sky-500/30 mb-4"
+            className="inline-flex items-center justify-center w-16 h-16 bg-linear-to-br from-sky-500 to-indigo-500 rounded-2xl shadow-lg shadow-sky-500/30 mb-4"
           >
             <Heart className="w-8 h-8 text-white" />
           </motion.div>

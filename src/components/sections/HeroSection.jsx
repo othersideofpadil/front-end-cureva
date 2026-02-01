@@ -20,11 +20,11 @@ const HeroSection = ({ isAuthenticated }) => {
               di Rumah Anda
             </h1>
             <p className="mt-6 text-lg text-slate-600 leading-relaxed">
-              Cureva menyediakan layanan homecare fisioterapi  bersama{" "}
+              Cureva adalah platform layanan homecare fisioterapi  bersama{" "}
               <strong className="text-sky-600">
                 Abbad Al Wafi, Amd. Kes, CDNP.
               </strong>{" "}
-              - fisioterapis berpengalaman dan tersertifikasi. Nikmati perawatan
+               seorang fisioterapis yang berpengalaman dan tersertifikasi. Nikmati perawatan
               berkualitas langsung di rumah Anda.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-4">

@@ -130,7 +130,7 @@ const Reports = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <Card className="bg-gradient-to-br from-sky-500 to-indigo-500 text-white">
+          <Card className="bg-linear-to-br from-sky-500 to-indigo-500 text-white">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs sm:text-sm text-sky-100">
