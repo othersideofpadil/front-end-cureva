@@ -117,7 +117,7 @@ const Profile = () => {
       <Card>
         <div className="flex flex-col sm:flex-row items-center gap-6 pb-6 border-b border-slate-100">
           <div className="relative">
-            <div className="w-24 h-24 bg-gradient-to-br from-sky-400 to-indigo-400 rounded-full flex items-center justify-center text-white text-3xl font-bold">
+            <div className="w-24 h-24 bg-linear-to-br from-sky-400 to-indigo-400 rounded-full flex items-center justify-center text-white text-3xl font-bold">
               {user?.nama?.charAt(0).toUpperCase() || "U"}
             </div>
             <button className="absolute bottom-0 right-0 p-2 bg-white rounded-full shadow-lg border border-slate-100 text-slate-600 hover:text-sky-500 transition-colors">
