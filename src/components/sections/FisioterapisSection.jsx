@@ -36,7 +36,7 @@ const FisioterapisSection = () => {
               </div>
               <div className="text-white">
                 <h3 className="text-lg font-bold">
-                  Abbad Al Wafi, S.Ft., M.Fis
+                  Abbad Al Wafi, Amd. Kes, CDNP.
                 </h3>
                 <p className="text-sky-100 text-sm">
                   Fisioterapis Bersertifikat
@@ -62,7 +62,7 @@ const FisioterapisSection = () => {
                   STR Aktif
                 </span>
                 <span className="px-2 py-1 bg-sky-50 text-sky-600 text-xs font-medium rounded-full">
-                  5+ Tahun
+                  3+ Tahun
                 </span>
                 <span className="px-2 py-1 bg-sky-50 text-sky-600 text-xs font-medium rounded-full">
                   Manual Therapy

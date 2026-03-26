@@ -6,3 +6,4 @@ export { default as notificationService } from "./notificationService";
 export { default as paymentService } from "./paymentService";
 export { default as jadwalService } from "./jadwalService";
 export { default as adminService } from "./adminService";
+export { connectSocket, getSocket, disconnectSocket } from "./socketService";

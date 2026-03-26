@@ -39,6 +39,33 @@ const Notifications = () => {
     fetchNotifications();
   }, []);
 
+  useEffect(() => {
+    const handleRealtimeNotification = (event) => {
+      const incoming = event.detail;
+
+      if (!incoming?.id) {
+        return;
+      }
+
+      setNotifications((prev) => {
+        if (prev.some((item) => item.id === incoming.id)) {
+          return prev;
+        }
+
+        return [incoming, ...prev];
+      });
+    };
+
+    window.addEventListener("notification:new", handleRealtimeNotification);
+
+    return () => {
+      window.removeEventListener(
+        "notification:new",
+        handleRealtimeNotification,
+      );
+    };
+  }, []);
+
   const fetchNotifications = async () => {
     try {
       const response = await notificationService.getMyNotifications();
@@ -54,7 +81,7 @@ const Notifications = () => {
     try {
       await notificationService.markAsRead(id);
       setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+        prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)),
       );
       // Trigger event to update navbar unread count
       window.dispatchEvent(new Event("notificationUpdate"));
@@ -106,7 +133,7 @@ const Notifications = () => {
   };
 
   const filteredNotifications = notifications.filter((n) =>
-    filter === "all" ? true : !n.is_read
+    filter === "all" ? true : !n.is_read,
   );
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
@@ -183,10 +210,10 @@ const Notifications = () => {
                           notification.type === "success"
                             ? "bg-emerald-100 text-emerald-500"
                             : notification.type === "error"
-                            ? "bg-red-100 text-red-500"
-                            : notification.type === "warning"
-                            ? "bg-amber-100 text-amber-500"
-                            : "bg-sky-100 text-sky-500"
+                              ? "bg-red-100 text-red-500"
+                              : notification.type === "warning"
+                                ? "bg-amber-100 text-amber-500"
+                                : "bg-sky-100 text-sky-500"
                         }`}
                       >
                         <Icon className="w-5 h-5" />

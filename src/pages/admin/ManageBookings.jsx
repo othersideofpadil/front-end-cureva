@@ -26,6 +26,7 @@ import {
   Modal,
   EmptyState,
 } from "../../components/common";
+import axios from "axios";
 
 const ManageBookings = () => {
   const [loading, setLoading] = useState(true);
@@ -320,7 +321,7 @@ const ManageBookings = () => {
                   </td>
                   <td className="py-4 px-6">
                     <p
-                      className="text-sm text-slate-600 max-w-[200px] truncate"
+                      className="text-sm text-slate-600 max-w-50 truncate"
                       title={booking.keluhan}
                     >
                       {booking.keluhan || "-"}

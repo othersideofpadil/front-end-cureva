@@ -1,5 +1,10 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { authService } from "../services";
+import {
+  connectSocket,
+  disconnectSocket,
+  getSocket,
+} from "../services/socketService";
 
 const AuthContext = createContext(null);
 
@@ -28,6 +33,7 @@ export const AuthProvider = ({ children }) => {
       if (savedUser && token) {
         setUser(savedUser);
         setIsAuthenticated(true);
+        connectSocket(token);
 
         // Verify token is still valid
         try {
@@ -50,6 +56,10 @@ export const AuthProvider = ({ children }) => {
     const response = await authService.login(email, password);
     setUser(response.data.user);
     setIsAuthenticated(true);
+
+    const token = localStorage.getItem("accessToken");
+    connectSocket(token);
+
     return response;
   };
 
@@ -64,10 +74,36 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
+      disconnectSocket();
       setUser(null);
       setIsAuthenticated(false);
     }
   };
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    const socket = getSocket();
+
+    if (!socket) {
+      return;
+    }
+
+    const handleNewNotification = (notification) => {
+      window.dispatchEvent(
+        new CustomEvent("notification:new", { detail: notification }),
+      );
+      window.dispatchEvent(new Event("notificationUpdate"));
+    };
+
+    socket.on("notification:new", handleNewNotification);
+
+    return () => {
+      socket.off("notification:new", handleNewNotification);
+    };
+  }, [isAuthenticated]);
 
   const updateProfile = async (data) => {
     const response = await authService.updateProfile(data);

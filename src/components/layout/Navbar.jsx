@@ -54,11 +54,22 @@ const Navbar = ({ isLandingPage = false, unreadCountProp = null }) => {
       }
     };
 
+    const handleRealtimeNotification = () => {
+      if (isAuthenticated) {
+        fetchUnreadCount();
+      }
+    };
+
     window.addEventListener("notificationUpdate", handleNotificationUpdate);
+    window.addEventListener("notification:new", handleRealtimeNotification);
     return () => {
       window.removeEventListener(
         "notificationUpdate",
         handleNotificationUpdate,
+      );
+      window.removeEventListener(
+        "notification:new",
+        handleRealtimeNotification,
       );
     };
   }, [isAuthenticated]);

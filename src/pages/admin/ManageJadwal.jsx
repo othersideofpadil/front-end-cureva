@@ -316,7 +316,7 @@ const ManageJadwal = () => {
               >
                 <ChevronLeft className="w-5 h-5 text-slate-600" />
               </button>
-              <span className="font-medium text-slate-700 min-w-[140px] text-center">
+              <span className="font-medium text-slate-700 min-w-35 text-center">
                 {monthYear}
               </span>
               <button
