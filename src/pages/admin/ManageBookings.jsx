@@ -71,7 +71,7 @@ const ManageBookings = () => {
         (b) =>
           b.kode_booking?.toLowerCase().includes(searchLower) ||
           b.nama_pasien?.toLowerCase().includes(searchLower) ||
-          b.nama_layanan?.toLowerCase().includes(searchLower)
+          b.nama_layanan?.toLowerCase().includes(searchLower),
       );
     }
 
@@ -111,7 +111,7 @@ const ManageBookings = () => {
       toast.success(
         `Booking berhasil ${
           status === "dikonfirmasi" ? "dikonfirmasi" : "ditolak"
-        }`
+        }`,
       );
       fetchBookings();
     } catch (error) {
@@ -264,163 +264,147 @@ const ManageBookings = () => {
         </div>
       </Card>
 
-      {/* Bookings Table */}
-      <Card padding="none">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="text-left py-4 px-6 text-sm font-semibold text-slate-600">
-                  Kode
-                </th>
-                <th className="text-left py-4 px-6 text-sm font-semibold text-slate-600">
-                  Pasien
-                </th>
-                <th className="text-left py-4 px-6 text-sm font-semibold text-slate-600">
-                  Layanan
-                </th>
-                <th className="text-left py-4 px-6 text-sm font-semibold text-slate-600">
-                  Keluhan
-                </th>
-                <th className="text-left py-4 px-6 text-sm font-semibold text-slate-600">
-                  Jadwal
-                </th>
-                <th className="text-left py-4 px-6 text-sm font-semibold text-slate-600">
-                  Status
-                </th>
-                <th className="text-left py-4 px-6 text-sm font-semibold text-slate-600">
-                  Aksi
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredBookings.map((booking) => (
-                <tr
-                  key={booking.id}
-                  className="border-b border-slate-100 hover:bg-slate-50"
-                >
-                  <td className="py-4 px-6">
-                    <span className="font-mono text-sm font-medium text-slate-800">
+      {/* Bookings Cards (responsive) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+        {filteredBookings.length === 0 ? (
+          <div className="col-span-full py-8">
+            <EmptyState
+              icon={Calendar}
+              title="Tidak ada booking"
+              description="Tidak ada booking yang sesuai dengan filter"
+            />
+          </div>
+        ) : (
+          filteredBookings.map((booking) => (
+            <Card
+              key={booking.id}
+              className="p-5 sm:p-6 hover:bg-slate-50 h-full rounded-lg shadow-sm flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-start justify-between">
+                  <div className="min-w-0">
+                    <p className="font-mono text-sm sm:text-base font-semibold text-slate-800 truncate">
                       {booking.kode_booking}
-                    </span>
-                  </td>
-                  <td className="py-4 px-6">
-                    <div>
-                      <p className="font-medium text-slate-800">
-                        {booking.nama_pasien}
-                      </p>
-                      <p className="text-sm text-slate-500">
-                        {booking.email_pasien}
-                      </p>
-                    </div>
-                  </td>
-                  <td className="py-4 px-6">
-                    <span className="text-slate-600">
+                    </p>
+                    <p className="font-medium text-base sm:text-lg text-slate-700 truncate">
+                      {booking.nama_pasien}
+                    </p>
+                  </div>
+                  <div className="ml-3 shrink-0">
+                    <Badge status={booking.status} size="sm" />
+                  </div>
+                </div>
+
+                <div className="mt-4 space-y-3 text-sm sm:text-base">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500 font-medium">Layanan</span>
+                    <span className="text-slate-700 font-semibold ml-3 text-right truncate">
                       {booking.nama_layanan}
                     </span>
-                  </td>
-                  <td className="py-4 px-6">
+                  </div>
+                  <div>
+                    <p className="text-sm sm:text-sm text-slate-500 mb-1">
+                      Keluhan
+                    </p>
                     <p
-                      className="text-sm text-slate-600 max-w-50 truncate"
+                      className="text-sm sm:text-base text-slate-700 leading-relaxed"
                       title={booking.keluhan}
                     >
                       {booking.keluhan || "-"}
                     </p>
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="text-sm">
-                      <p className="font-medium text-slate-800">
+                  </div>
+                  <div>
+                    <p className="text-sm sm:text-sm text-slate-500 mb-1">
+                      Alamat
+                    </p>
+                    <p
+                      className="text-sm sm:text-base text-slate-700 leading-relaxed"
+                      title={booking.alamat}
+                    >
+                      {booking.alamat || "-"}
+                    </p>
+                  </div>
+                  <div className="flex justify-between items-start">
+                    <span className="text-slate-500 font-medium">Jadwal</span>
+                    <div className="text-right">
+                      <p className="font-semibold text-base sm:text-lg text-slate-800">
                         {formatDate(booking.tanggal)}
                       </p>
-                      <p className="text-slate-500">
+                      <p className="text-sm sm:text-sm text-slate-500">
                         {formatTime(booking.waktu)} WIB
                       </p>
                     </div>
-                  </td>
-                  <td className="py-4 px-6">
-                    <Badge status={booking.status} size="sm" />
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          setSelectedBooking(booking);
-                          setShowDetailModal(true);
-                        }}
-                        className="p-2 text-slate-400 hover:text-sky-500 hover:bg-sky-50 rounded-lg transition-colors"
-                        title="Lihat Detail"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      {booking.status === "menunggu_konfirmasi" && (
-                        <>
-                          <button
-                            onClick={() =>
-                              handleQuickAction(booking, "dikonfirmasi")
-                            }
-                            className="p-2 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors"
-                            title="Konfirmasi"
-                          >
-                            <Check className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setSelectedBooking(booking);
-                              setNewStatus("ditolak");
-                              setShowStatusModal(true);
-                            }}
-                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Tolak"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </>
-                      )}
-                      {booking.status !== "selesai" &&
-                        booking.status !== "ditolak" &&
-                        !booking.status.includes("dibatalkan") && (
-                          <button
-                            onClick={() => {
-                              setSelectedBooking(booking);
-                              setShowStatusModal(true);
-                            }}
-                            className="px-3 py-1.5 text-xs font-medium text-sky-600 bg-sky-50 rounded-lg hover:bg-sky-100 transition-colors"
-                          >
-                            Update
-                          </button>
-                        )}
-                      {(booking.status === "ditolak" ||
-                        booking.status.includes("dibatalkan")) && (
-                        <button
-                          onClick={() => {
-                            setSelectedBooking(booking);
-                            setShowDeleteModal(true);
-                          }}
-                          className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Hapus"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {filteredBookings.length === 0 && (
-                <tr>
-                  <td colSpan="7" className="py-8">
-                    <EmptyState
-                      icon={Calendar}
-                      title="Tidak ada booking"
-                      description="Tidak ada booking yang sesuai dengan filter"
-                    />
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-5 flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    setSelectedBooking(booking);
+                    setShowDetailModal(true);
+                  }}
+                  className="p-3 text-slate-400 hover:text-sky-500 hover:bg-sky-50 rounded-lg transition-colors"
+                  title="Lihat Detail"
+                >
+                  <Eye className="w-5 h-5" />
+                </button>
+
+                {booking.status === "menunggu_konfirmasi" && (
+                  <>
+                    <button
+                      onClick={() => handleQuickAction(booking, "dikonfirmasi")}
+                      className="p-3 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors"
+                      title="Konfirmasi"
+                    >
+                      <Check className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedBooking(booking);
+                        setNewStatus("ditolak");
+                        setShowStatusModal(true);
+                      }}
+                      className="p-3 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Tolak"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </>
+                )}
+
+                {booking.status !== "selesai" &&
+                  booking.status !== "ditolak" &&
+                  !booking.status.includes("dibatalkan") && (
+                    <button
+                      onClick={() => {
+                        setSelectedBooking(booking);
+                        setShowStatusModal(true);
+                      }}
+                      className="px-4 py-2 text-sm font-medium text-sky-600 bg-sky-50 rounded-lg hover:bg-sky-100 transition-colors"
+                    >
+                      Update
+                    </button>
+                  )}
+
+                {(booking.status === "ditolak" ||
+                  booking.status.includes("dibatalkan")) && (
+                  <button
+                    onClick={() => {
+                      setSelectedBooking(booking);
+                      setShowDeleteModal(true);
+                    }}
+                    className="p-3 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Hapus"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
+            </Card>
+          ))
+        )}
+      </div>
 
       {/* Detail Modal */}
       <Modal
@@ -580,7 +564,7 @@ const ManageBookings = () => {
                     <option key={option.value} value={option.value}>
                       {option.label}
                     </option>
-                  )
+                  ),
                 )}
             </select>
             {selectedBooking &&

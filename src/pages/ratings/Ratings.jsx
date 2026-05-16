@@ -1,69 +1,93 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Star, Filter, Search, TrendingUp, Send } from "lucide-react";
+import { Star, Search, Send, FileX, Clock, CheckCircle } from "lucide-react";
 import { bookingService } from "../../services";
-import { LoadingSpinner, RatingCard, Card } from "../../components/common";
+import { LoadingSpinner, RatingCard, Button } from "../../components/common";
 import { toast } from "react-hot-toast";
 
+const formatDate = (dateStr) =>
+  new Date(dateStr).toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
+/* ── Star input ── */
+const StarPicker = ({ value, hover, onHover, onLeave, onClick }) => (
+  <div className="flex gap-1.5">
+    {[1, 2, 3, 4, 5].map((star) => (
+      <button
+        key={star}
+        type="button"
+        onClick={() => onClick(star)}
+        onMouseEnter={() => onHover(star)}
+        onMouseLeave={onLeave}
+        className="transition-transform hover:scale-110 focus:outline-none"
+      >
+        <Star
+          className={`w-8 h-8 ${
+            star <= (hover || value)
+              ? "fill-amber-400 text-amber-400"
+              : "text-slate-300"
+          }`}
+        />
+      </button>
+    ))}
+  </div>
+);
+
+/* ── Section heading ── */
+const SectionTitle = ({ children }) => (
+  <h2 className="text-base font-semibold text-slate-800 mb-3">{children}</h2>
+);
+
+/* ════════════════════════════════════════ */
+
 const Ratings = () => {
-  const [ratings, setRatings] = useState([]);
+  // Tab: "riwayat" | "tulis"
+  const [activeTab, setActiveTab] = useState("riwayat");
+
+  // Data
+  const [myRatings, setMyRatings] = useState([]); // booking selesai + sudah rated
+  const [pendingBookings, setPendingBookings] = useState([]); // booking selesai + belum rated
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("all");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [completedBookings, setCompletedBookings] = useState([]);
+
+  // Form
   const [selectedBooking, setSelectedBooking] = useState("");
   const [userRating, setUserRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Search (riwayat)
+  const [searchQuery, setSearchQuery] = useState("");
+
   useEffect(() => {
-    fetchRatings();
-    fetchCompletedBookings();
+    fetchData();
   }, []);
 
-  const fetchRatings = async () => {
+  const fetchData = async () => {
+    setLoading(true);
     try {
-      const response = await bookingService.getAllRatings({ limit: 100 });
-      setRatings(response.data || []);
+      const response = await bookingService.getMyBookings();
+      const bookings = response.data || [];
+
+      const completed = bookings.filter((b) => b.status === "selesai");
+      setMyRatings(completed.filter((b) => b.rating));
+      setPendingBookings(completed.filter((b) => !b.rating));
     } catch (error) {
-      console.error("Failed to fetch ratings:", error);
+      console.error("Failed to fetch bookings:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchCompletedBookings = async () => {
-    try {
-      const response = await bookingService.getMyBookings();
-      const completed = response.data.filter(
-        (booking) =>
-          booking.status === "selesai" &&
-          (!booking.rating || booking.rating === null)
-      );
-      setCompletedBookings(completed);
-    } catch (error) {
-      console.error("Failed to fetch completed bookings:", error);
-    }
-  };
-
   const handleSubmitReview = async (e) => {
     e.preventDefault();
-
-    if (!selectedBooking) {
-      toast.error("Pilih booking yang ingin direview");
-      return;
-    }
-
-    if (userRating === 0) {
-      toast.error("Pilih rating terlebih dahulu");
-      return;
-    }
-
-    if (!reviewText.trim()) {
-      toast.error("Tulis review Anda");
-      return;
-    }
+    if (!selectedBooking)
+      return toast.error("Pilih booking yang ingin direview");
+    if (userRating === 0) return toast.error("Pilih rating terlebih dahulu");
+    if (!reviewText.trim()) return toast.error("Tulis review Anda");
 
     setSubmitting(true);
     try {
@@ -71,309 +95,341 @@ const Ratings = () => {
         rating: userRating,
         review: reviewText.trim(),
       });
-
-      toast.success("Review berhasil dikirim!");
-
-      // Reset form
+      toast.success("Ulasan berhasil dikirim!");
       setSelectedBooking("");
       setUserRating(0);
       setReviewText("");
-
-      // Refresh data
-      fetchRatings();
-      fetchCompletedBookings();
+      await fetchData();
+      setActiveTab("riwayat");
     } catch (error) {
-      toast.error(error.response?.data?.message || "Gagal mengirim review");
+      toast.error(error.response?.data?.message || "Gagal mengirim ulasan");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const filteredRatings = ratings.filter((rating) => {
-    const matchesFilter =
-      filter === "all" ||
-      (filter === "5" && rating.rating === 5) ||
-      (filter === "4" && rating.rating === 4) ||
-      (filter === "3" && rating.rating <= 3);
-
-    const matchesSearch =
-      searchQuery === "" ||
-      rating.nama_pasien.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      rating.review.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      rating.nama_layanan.toLowerCase().includes(searchQuery.toLowerCase());
-
-    return matchesFilter && matchesSearch;
+  const filteredRatings = myRatings.filter((b) => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      b.nama_layanan?.toLowerCase().includes(q) ||
+      b.review?.toLowerCase().includes(q)
+    );
   });
 
-  const averageRating =
-    ratings.length > 0
+  if (loading) return <LoadingSpinner fullScreen />;
+
+  /* ── stat helpers ── */
+  const avgRating =
+    myRatings.length > 0
       ? (
-          ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length
+          myRatings.reduce((s, r) => s + r.rating, 0) / myRatings.length
         ).toFixed(1)
-      : 0;
-
-  const ratingDistribution = [5, 4, 3, 2, 1].map((star) => ({
-    star,
-    count: ratings.filter((r) => r.rating === star).length,
-    percentage:
-      ratings.length > 0
-        ? (
-            (ratings.filter((r) => r.rating === star).length / ratings.length) *
-            100
-          ).toFixed(0)
-        : 0,
-  }));
-
-  if (loading) {
-    return <LoadingSpinner fullScreen />;
-  }
+      : null;
 
   return (
-    <div className="grid lg:grid-cols-[1fr_380px] gap-6">
-      {/* Main Content */}
-      <div className="space-y-6">
-        {/* Header */}
+    <div className="min-h-screen bg-slate-50 px-4 py-5 sm:py-8 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto space-y-5">
+        {/* ── Header ── */}
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">
-            Rating & Review Fisioterapis
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-800">
+            Ulasan Saya
           </h1>
-          <p className="text-slate-500 mt-1">
-            Lihat semua testimoni dan rating dari pasien kami
+          <p className="text-sm text-slate-500 mt-0.5">
+            Riwayat ulasan yang pernah Anda berikan
           </p>
         </div>
 
-        {/* Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Average Rating */}
-          <Card>
-            <div className="text-center">
-              <div className="text-5xl font-bold text-sky-500 mb-2">
-                {averageRating}
-              </div>
-              <div className="flex justify-center gap-1 mb-2">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Star
-                    key={star}
-                    className={`w-5 h-5 ${
-                      star <= Math.round(averageRating)
-                        ? "fill-amber-400 text-amber-400"
-                        : "text-slate-200"
-                    }`}
-                  />
-                ))}
-              </div>
-              <p className="text-slate-600 text-sm">
-                Dari {ratings.length} rating
-              </p>
-            </div>
-          </Card>
-
-          {/* Rating Distribution */}
-          <Card className="md:col-span-2">
-            <h3 className="font-semibold text-slate-800 mb-4">
-              Distribusi Rating
-            </h3>
-            <div className="space-y-2">
-              {ratingDistribution.map(({ star, count, percentage }) => (
-                <div key={star} className="flex items-center gap-3">
-                  <div className="flex items-center gap-1 w-16">
-                    <span className="text-sm font-medium text-slate-700">
-                      {star}
-                    </span>
-                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                  </div>
-                  <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-amber-400 transition-all duration-500"
-                      style={{ width: `${percentage}%` }}
-                    />
-                  </div>
-                  <span className="text-sm text-slate-600 w-12 text-right">
-                    {count}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
-
-        {/* Filters & Search */}
-        <Card>
-          <div className="flex flex-col sm:flex-row gap-4">
-            {/* Search */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Cari berdasarkan nama atau review..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
-              />
-            </div>
-
-            {/* Filter */}
-            <div className="flex items-center gap-2">
-              <Filter className="w-5 h-5 text-slate-500" />
-              <select
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-                className="px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
-              >
-                <option value="all">Semua Rating</option>
-                <option value="5">⭐ 5 Bintang</option>
-                <option value="4">⭐ 4 Bintang</option>
-                <option value="3">⭐ ≤3 Bintang</option>
-              </select>
+        {/* ── Summary stats ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col items-center text-center">
+            <span className="text-2xl sm:text-3xl font-bold text-sky-500">
+              {myRatings.length}
+            </span>
+            <span className="text-xs text-slate-400 mt-0.5">
+              Ulasan diberikan
+            </span>
+          </div>
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col items-center text-center">
+            <span className="text-2xl sm:text-3xl font-bold text-amber-500">
+              {avgRating ?? "—"}
+            </span>
+            <div className="flex items-center gap-0.5 mt-0.5">
+              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+              <span className="text-xs text-slate-400">Rata-rata</span>
             </div>
           </div>
-        </Card>
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col items-center text-center col-span-2 sm:col-span-1">
+            <span className="text-2xl sm:text-3xl font-bold text-emerald-500">
+              {pendingBookings.length}
+            </span>
+            <span className="text-xs text-slate-400 mt-0.5">
+              Menunggu ulasan
+            </span>
+          </div>
+        </div>
 
-        {/* Ratings List */}
-        {filteredRatings.length > 0 ? (
+        {/* ── Tabs ── */}
+        <div className="flex gap-1 p-1 bg-slate-100 rounded-xl w-full sm:w-fit">
+          {[
+            { key: "riwayat", label: `Riwayat (${myRatings.length})` },
+            {
+              key: "tulis",
+              label: `Tulis Ulasan${pendingBookings.length > 0 ? ` (${pendingBookings.length})` : ""}`,
+            },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                activeTab === tab.key
+                  ? "bg-white text-slate-800 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ════════ TAB: RIWAYAT ════════ */}
+        {activeTab === "riwayat" && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="grid sm:grid-cols-2 gap-6"
+            key="riwayat"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-4"
           >
-            {filteredRatings.map((rating, index) => (
-              <motion.div
-                key={`${rating.id_pemesanan}-${index}`}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-              >
-                <RatingCard
-                  rating={rating.rating}
-                  name={rating.nama_pasien}
-                  role={rating.nama_layanan}
-                  content={rating.review}
-                  therapistName="Abbad Al Wafi, S.Ft., M.Fis"
+            {/* Search */}
+            {myRatings.length > 0 && (
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Cari berdasarkan layanan atau review…"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border border-slate-200 bg-white placeholder-slate-400 text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-sky-400 transition"
                 />
-              </motion.div>
-            ))}
-          </motion.div>
-        ) : (
-          <Card>
-            <div className="text-center py-12">
-              <TrendingUp className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-500">
-                {searchQuery || filter !== "all"
-                  ? "Tidak ada rating yang sesuai dengan filter"
-                  : "Belum ada rating tersedia"}
-              </p>
-            </div>
-          </Card>
-        )}
-      </div>
-
-      {/* Sidebar - Write Review Form */}
-      <div className="lg:sticky lg:top-20 h-fit">
-        <Card>
-          <h3 className="text-lg font-bold text-slate-800 mb-4">
-            Tulis Ulasan
-          </h3>
-
-          {completedBookings.length > 0 ? (
-            <form onSubmit={handleSubmitReview} className="space-y-4">
-              {/* Select Booking */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Pilih Booking
-                </label>
-                <select
-                  value={selectedBooking}
-                  onChange={(e) => setSelectedBooking(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm"
-                  required
-                >
-                  <option value="">-- Pilih Booking --</option>
-                  {completedBookings.map((booking) => (
-                    <option key={booking.id} value={booking.id}>
-                      {booking.nama_layanan} -{" "}
-                      {new Date(booking.tanggal).toLocaleDateString("id-ID")}
-                    </option>
-                  ))}
-                </select>
               </div>
+            )}
 
-              {/* Rating Stars */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Rating Anda
-                </label>
-                <div className="flex gap-2">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      type="button"
-                      onClick={() => setUserRating(star)}
-                      onMouseEnter={() => setHoverRating(star)}
-                      onMouseLeave={() => setHoverRating(0)}
-                      className="transition-transform hover:scale-110"
-                    >
-                      <Star
-                        className={`w-8 h-8 ${
-                          star <= (hoverRating || userRating)
-                            ? "fill-amber-400 text-amber-400"
-                            : "text-slate-300"
-                        }`}
-                      />
-                    </button>
-                  ))}
+            {/* Pending — belum diulas */}
+            {pendingBookings.length > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+                <div className="flex items-start gap-3">
+                  <Clock className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-amber-800">
+                      {pendingBookings.length} booking menunggu ulasan Anda
+                    </p>
+                    <p className="text-xs text-amber-600 mt-0.5">
+                      Bagikan pengalaman Anda untuk membantu pasien lain.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab("tulis")}
+                    className="shrink-0 text-xs font-semibold text-amber-700 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    Tulis sekarang
+                  </button>
                 </div>
               </div>
+            )}
 
-              {/* Review Text */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Bagikan pengalaman Anda
-                </label>
-                <textarea
-                  value={reviewText}
-                  onChange={(e) => setReviewText(e.target.value)}
-                  placeholder="Bagikan pengalaman Anda dengan fisioterapis kami..."
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 resize-none text-sm"
-                  rows="6"
-                  maxLength="500"
-                  required
-                />
-                <p className="text-xs text-slate-400 mt-1">
-                  {reviewText.length}/500 karakter
-                </p>
+            {/* Rating cards */}
+            {filteredRatings.length > 0 ? (
+              <div className="space-y-3">
+                {filteredRatings.map((booking, index) => (
+                  <motion.div
+                    key={booking.id}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.04 }}
+                  >
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
+                      {/* Top row */}
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-slate-800 truncate">
+                            {booking.nama_layanan || "Fisioterapi"}
+                          </p>
+                          <p className="text-xs text-slate-400 mt-0.5">
+                            {formatDate(booking.tanggal)}
+                          </p>
+                        </div>
+                        {/* Stars */}
+                        <div className="flex gap-0.5 shrink-0">
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <Star
+                              key={s}
+                              className={`w-4 h-4 ${
+                                s <= booking.rating
+                                  ? "fill-amber-400 text-amber-400"
+                                  : "text-slate-200"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Review text */}
+                      {booking.review && (
+                        <p className="text-sm text-slate-600 bg-slate-50 rounded-xl px-3 py-2.5 leading-relaxed">
+                          "{booking.review}"
+                        </p>
+                      )}
+
+                      {/* Footer */}
+                      <div className="flex items-center gap-1.5 mt-3">
+                        <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+                        <span className="text-xs text-slate-400">
+                          Ulasan terverifikasi · {booking.rating}/5
+                        </span>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
               </div>
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={submitting || !userRating || !reviewText.trim()}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-sky-500 text-white font-semibold rounded-lg hover:bg-sky-600 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
-              >
-                {submitting ? (
-                  <>
-                    <LoadingSpinner size="sm" />
-                    Mengirim...
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-4 h-4" />
-                    Kirim Ulasan
-                  </>
+            ) : (
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 flex flex-col items-center text-center gap-3">
+                <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center">
+                  <FileX className="w-6 h-6 text-slate-400" />
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-700 text-sm">
+                    {searchQuery ? "Tidak ada hasil" : "Belum ada ulasan"}
+                  </p>
+                  <p className="text-xs text-slate-400 mt-1">
+                    {searchQuery
+                      ? "Coba ubah kata kunci pencarian."
+                      : "Selesaikan sesi fisioterapi dan bagikan pengalaman Anda."}
+                  </p>
+                </div>
+                {!searchQuery && pendingBookings.length > 0 && (
+                  <Button size="sm" onClick={() => setActiveTab("tulis")}>
+                    Tulis Ulasan Pertama
+                  </Button>
                 )}
-              </button>
-            </form>
-          ) : (
-            <div className="text-center py-8">
-              <Star className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-              <p className="text-slate-500 text-sm mb-2">
-                Tidak ada booking yang dapat direview
-              </p>
-              <p className="text-slate-400 text-xs">
-                Selesaikan booking terlebih dahulu untuk memberikan ulasan
-              </p>
-            </div>
-          )}
-        </Card>
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* ════════ TAB: TULIS ULASAN ════════ */}
+        {activeTab === "tulis" && (
+          <motion.div
+            key="tulis"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            {pendingBookings.length > 0 ? (
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6">
+                <SectionTitle>Tulis Ulasan Baru</SectionTitle>
+                <form onSubmit={handleSubmitReview} className="space-y-5">
+                  {/* Select booking */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                      Pilih Sesi <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={selectedBooking}
+                      onChange={(e) => setSelectedBooking(e.target.value)}
+                      className="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-sky-400 transition"
+                      required
+                    >
+                      <option value="">— Pilih sesi yang ingin diulas —</option>
+                      {pendingBookings.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.nama_layanan} · {formatDate(b.tanggal)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Star rating */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                      Rating Anda <span className="text-red-500">*</span>
+                    </label>
+                    <StarPicker
+                      value={userRating}
+                      hover={hoverRating}
+                      onHover={setHoverRating}
+                      onLeave={() => setHoverRating(0)}
+                      onClick={setUserRating}
+                    />
+                    {userRating > 0 && (
+                      <p className="text-xs text-amber-600 mt-1.5">
+                        {
+                          [
+                            "",
+                            "Sangat Buruk",
+                            "Buruk",
+                            "Cukup",
+                            "Bagus",
+                            "Luar Biasa",
+                          ][userRating]
+                        }
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Review text */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                      Cerita pengalaman Anda{" "}
+                      <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      value={reviewText}
+                      onChange={(e) => setReviewText(e.target.value)}
+                      placeholder="Bagaimana pelayanan fisioterapis? Apakah kondisi Anda membaik setelah sesi?"
+                      className="w-full px-3.5 py-3 text-sm border border-slate-200 rounded-xl bg-white text-slate-700 placeholder:text-slate-300 resize-none focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-sky-400 transition"
+                      rows={5}
+                      maxLength={500}
+                      required
+                    />
+                    <p className="text-xs text-slate-400 mt-1 text-right">
+                      {reviewText.length}/500
+                    </p>
+                  </div>
+
+                  {/* Submit */}
+                  <Button
+                    type="submit"
+                    leftIcon={Send}
+                    loading={submitting}
+                    disabled={
+                      submitting ||
+                      !userRating ||
+                      !reviewText.trim() ||
+                      !selectedBooking
+                    }
+                    className="w-full justify-center"
+                  >
+                    Kirim Ulasan
+                  </Button>
+                </form>
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 flex flex-col items-center text-center gap-3">
+                <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center">
+                  <Star className="w-6 h-6 text-slate-300" />
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-700 text-sm">
+                    Tidak ada sesi yang dapat diulas
+                  </p>
+                  <p className="text-xs text-slate-400 mt-1 max-w-xs">
+                    Semua booking Anda sudah diulas, atau belum ada sesi yang
+                    selesai.
+                  </p>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
       </div>
     </div>
   );

@@ -22,12 +22,25 @@ import {
 } from "../../components/common";
 
 const iconMap = {
-  booking: Calendar,
-  payment: CreditCard,
+  pemesanan: Calendar,
+  pembayaran: CreditCard,
+  jadwal: Clock,
+  rating: CheckCircle,
   success: CheckCircle,
   error: XCircle,
   warning: AlertCircle,
   info: Bell,
+};
+
+const typeStyles = {
+  pemesanan: "bg-indigo-100 text-indigo-600",
+  pembayaran: "bg-sky-100 text-sky-600",
+  jadwal: "bg-amber-100 text-amber-600",
+  rating: "bg-emerald-100 text-emerald-600",
+  success: "bg-emerald-100 text-emerald-600",
+  error: "bg-red-100 text-red-600",
+  warning: "bg-amber-100 text-amber-600",
+  info: "bg-slate-100 text-slate-600",
 };
 
 const Notifications = () => {
@@ -189,7 +202,8 @@ const Notifications = () => {
         <div className="space-y-3">
           <AnimatePresence>
             {filteredNotifications.map((notification, index) => {
-              const Icon = iconMap[notification.type] || Bell;
+              const typeKey = (notification.type || "info").toLowerCase();
+              const Icon = iconMap[typeKey] || Bell;
               return (
                 <motion.div
                   key={notification.id}
@@ -207,13 +221,7 @@ const Notifications = () => {
                     <div className="p-4 flex gap-4">
                       <div
                         className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-                          notification.type === "success"
-                            ? "bg-emerald-100 text-emerald-500"
-                            : notification.type === "error"
-                              ? "bg-red-100 text-red-500"
-                              : notification.type === "warning"
-                                ? "bg-amber-100 text-amber-500"
-                                : "bg-sky-100 text-sky-500"
+                          typeStyles[typeKey] || typeStyles.info
                         }`}
                       >
                         <Icon className="w-5 h-5" />

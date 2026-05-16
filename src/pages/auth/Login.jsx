@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Mail, Lock, ArrowRight, Heart, ArrowLeft } from "lucide-react";
 import toast from "react-hot-toast";
@@ -8,6 +8,7 @@ import { Button, Input, Card } from "../../components/common";
 
 const Login = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -48,12 +49,14 @@ const Login = () => {
       toast.success(response.message || "Login berhasil!");
 
       // Redirect based on role
-      const user = response.data.user;
-      if (user.role === "admin") {
-        navigate("/admin");
-      } else {
-        navigate("/");
+      const redirect = searchParams.get("redirect");
+      if (redirect) {
+        navigate(redirect);
+        return;
       }
+
+      const user = response.data.user;
+      navigate(user.role === "admin" ? "/admin" : "/");
     } catch (error) {
       const message = error.response?.data?.message || "Login gagal";
       toast.error(message);
@@ -63,7 +66,7 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-sky-50 via-white to-indigo-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-linear-to-br from-[#003C82]/10 via-white to-[#7B68EE]/10 flex items-center justify-center p-4">
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-sky-200 rounded-full opacity-30 blur-3xl" />
@@ -114,9 +117,9 @@ const Login = () => {
               </p>
             </div>
 
-            <div className="flex items-center gap-2 text-sky-600">
+            <div className="flex items-center gap-2 text-primary">
               <Heart className="w-6 h-6 fill-current" />
-              <span className="text-lg font-medium">
+              <span className="text-lg font-medium ">
                 Kesehatan Anda, Prioritas Kami
               </span>
             </div>
@@ -183,7 +186,7 @@ const Login = () => {
                   </label>
                   <Link
                     to="/forgot-password"
-                    className="text-sky-500 hover:text-sky-600 font-medium"
+                    className="font-medium text-primary"
                   >
                     Lupa password?
                   </Link>
@@ -214,7 +217,7 @@ const Login = () => {
               {/* Google Login Button */}
               <button
                 type="button"
-                className="w-full flex items-center justify-center gap-3 px-4 py-3 border-2 border-slate-200 rounded-xl hover:border-slate-300 hover:bg-slate-50 transition-all duration-200 group"
+                className="w-full flex items-center justify-center gap-3 px-4 py-3 border-2 border-slate-200 rounded-xl hover:border-slate-300 hover:bg-slate-50 transition-all duration-200 group cursor-pointer"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path
@@ -234,7 +237,7 @@ const Login = () => {
                     d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                   />
                 </svg>
-                <span className="text-slate-700 font-medium group-hover:text-slate-900">
+                <span className="text-primary font-medium ">
                   Masuk dengan Google
                 </span>
               </button>
@@ -242,10 +245,7 @@ const Login = () => {
               <div className="mt-6 text-center">
                 <p className="text-slate-500">
                   Belum punya akun?{" "}
-                  <Link
-                    to="/register"
-                    className="text-sky-500 hover:text-sky-600 font-semibold"
-                  >
+                  <Link to="/register" className="text-primary font-semibold ">
                     Daftar sekarang
                   </Link>
                 </p>

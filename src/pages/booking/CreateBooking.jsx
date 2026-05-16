@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
@@ -12,20 +12,32 @@ import {
   Check,
   AlertCircle,
   ExternalLink,
+  Banknote,
+  Stethoscope,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { bookingService, layananService, jadwalService } from "../../services";
 import { Card, Button, Input, LoadingSpinner } from "../../components/common";
 
 const steps = [
-  { id: 1, title: "Pilih Layanan", icon: FileText },
-  { id: 2, title: "Jadwal", icon: Calendar },
-  { id: 3, title: "Detail", icon: MapPin },
-  { id: 4, title: "Konfirmasi", icon: Check },
+  { id: 1, title: "Layanan", label: "Pilih Layanan", icon: FileText },
+  { id: 2, title: "Jadwal", label: "Tanggal & Waktu", icon: Calendar },
+  { id: 3, title: "Detail", label: "Info Detail", icon: MapPin },
+  { id: 4, title: "Konfirmasi", label: "Konfirmasi", icon: Check },
 ];
+
+/* ─── Reusable styled pill badge ─── */
+const StatusBadge = ({ label, className }) => (
+  <span
+    className={`text-[10px] font-semibold tracking-wide px-2 py-0.5 rounded-full ${className}`}
+  >
+    {label}
+  </span>
+);
 
 const CreateBooking = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -49,17 +61,30 @@ const CreateBooking = () => {
   }, []);
 
   useEffect(() => {
-    if (formData.tanggal) {
-      fetchAvailableSlots(formData.tanggal);
+    const tanggal = searchParams.get("tanggal");
+    const waktu = searchParams.get("waktu");
+    if (tanggal || waktu) {
+      setFormData((prev) => ({
+        ...prev,
+        tanggal: tanggal || prev.tanggal,
+        waktu: waktu || prev.waktu,
+      }));
     }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!formData.tanggal) return;
+    fetchAvailableSlots(formData.tanggal);
+    const id = setInterval(() => fetchAvailableSlots(formData.tanggal), 30000);
+    return () => clearInterval(id);
   }, [formData.tanggal]);
 
   const fetchLayanan = async () => {
     try {
       const response = await layananService.getAll();
       setLayanan(response.data || []);
-    } catch (error) {
-      console.error("Failed to fetch layanan:", error);
+    } catch (e) {
+      console.error(e);
     } finally {
       setLoading(false);
     }
@@ -68,15 +93,73 @@ const CreateBooking = () => {
   const fetchAvailableSlots = async (tanggal) => {
     setSlotsLoading(true);
     try {
-      const response = await jadwalService.getAvailable(tanggal);
-      console.log("Slots response:", response);
+      const response = await jadwalService.getSlotsPublic(tanggal);
       setAvailableSlots(response.data || []);
-    } catch (error) {
-      console.error("Failed to fetch slots:", error);
+    } catch (e) {
       setAvailableSlots([]);
     } finally {
       setSlotsLoading(false);
     }
+  };
+
+  const normalizeTime = (t) => t?.slice(0, 5) || "";
+
+  const addMinutes = (timeStr, mins) => {
+    const [h, m] = normalizeTime(timeStr).split(":").map(Number);
+    const total = h * 60 + m + mins;
+    if (isNaN(total) || total < 0) return null;
+    return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+  };
+
+  const getBufferTimes = (slots) => {
+    const set = new Set();
+    slots
+      .filter((s) => s.status === "dipesan")
+      .forEach((s) => {
+        const next = addMinutes(s.waktu_mulai, 60);
+        if (next) set.add(next);
+      });
+    return set;
+  };
+
+  const getSlotState = (tanggal, slot, bufferTimes) => {
+    const waktu = slot.waktu_mulai?.slice(0, 5) || slot.waktu;
+    if (slot.status === "dipesan")
+      return {
+        label: "Terpesan",
+        color: "bg-sky-100 text-sky-600",
+        disabled: true,
+      };
+    if (slot.status === "diblock_admin")
+      return {
+        label: "Diblokir",
+        color: "bg-red-100 text-red-600",
+        disabled: true,
+      };
+    if (slot.status === "libur")
+      return {
+        label: "Libur",
+        color: "bg-slate-100 text-slate-500",
+        disabled: true,
+      };
+    const now = new Date();
+    if (new Date(`${tanggal}T${waktu}:00`) <= now)
+      return {
+        label: "Lewat",
+        color: "bg-slate-100 text-slate-400",
+        disabled: true,
+      };
+    if (bufferTimes.has(normalizeTime(waktu)))
+      return {
+        label: "Buffer",
+        color: "bg-amber-100 text-amber-600",
+        disabled: true,
+      };
+    return {
+      label: "Tersedia",
+      color: "bg-emerald-100 text-emerald-600",
+      disabled: false,
+    };
   };
 
   const handleLayananSelect = (item) => {
@@ -87,52 +170,31 @@ const CreateBooking = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: "" }));
-    }
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
   const validateStep = () => {
     const newErrors = {};
-
-    switch (currentStep) {
-      case 1:
-        if (!formData.id_layanan) {
-          toast.error("Pilih layanan terlebih dahulu");
-          return false;
-        }
-        break;
-      case 2:
-        if (!formData.tanggal) {
-          newErrors.tanggal = "Tanggal wajib dipilih";
-        }
-        if (!formData.waktu) {
-          newErrors.waktu = "Waktu wajib dipilih";
-        }
-        break;
-      case 3:
-        if (!formData.alamat.trim()) {
-          newErrors.alamat = "Alamat wajib diisi";
-        }
-        if (!formData.keluhan.trim()) {
-          newErrors.keluhan = "Keluhan wajib diisi";
-        }
-        break;
+    if (currentStep === 1 && !formData.id_layanan) {
+      toast.error("Pilih layanan terlebih dahulu");
+      return false;
     }
-
+    if (currentStep === 2) {
+      if (!formData.tanggal) newErrors.tanggal = "Tanggal wajib dipilih";
+      if (!formData.waktu) newErrors.waktu = "Waktu wajib dipilih";
+    }
+    if (currentStep === 3) {
+      if (!formData.alamat.trim()) newErrors.alamat = "Alamat wajib diisi";
+      if (!formData.keluhan.trim()) newErrors.keluhan = "Keluhan wajib diisi";
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const nextStep = () => {
-    if (validateStep()) {
-      setCurrentStep((prev) => Math.min(prev + 1, 4));
-    }
+    if (validateStep()) setCurrentStep((p) => Math.min(p + 1, 4));
   };
-
-  const prevStep = () => {
-    setCurrentStep((prev) => Math.max(prev - 1, 1));
-  };
+  const prevStep = () => setCurrentStep((p) => Math.max(p - 1, 1));
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -141,43 +203,34 @@ const CreateBooking = () => {
       toast.success("Booking berhasil dibuat!");
       navigate(`/bookings/${response.data.id}`);
     } catch (error) {
-      const message = error.response?.data?.message || "Gagal membuat booking";
-      toast.error(message);
+      toast.error(error.response?.data?.message || "Gagal membuat booking");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const formatDate = (dateStr) => {
-    return new Date(dateStr).toLocaleDateString("id-ID", {
+  const formatDate = (d) =>
+    new Date(d).toLocaleDateString("id-ID", {
       weekday: "long",
       day: "numeric",
       month: "long",
       year: "numeric",
     });
-  };
 
-  // Get min date (tomorrow)
-  const getMinDate = () => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return tomorrow.toISOString().split("T")[0];
-  };
-
-  // Get max date (30 days from now)
+  const getMinDate = () => new Date().toISOString().split("T")[0];
   const getMaxDate = () => {
-    const maxDate = new Date();
-    maxDate.setDate(maxDate.getDate() + 30);
-    return maxDate.toISOString().split("T")[0];
+    const d = new Date();
+    d.setDate(d.getDate() + 30);
+    return d.toISOString().split("T")[0];
   };
 
-  if (loading) {
-    return <LoadingSpinner fullScreen />;
-  }
+  if (loading) return <LoadingSpinner fullScreen />;
+
+  const bufferTimes = getBufferTimes(availableSlots);
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      {/* Header */}
+    <div className="max-w-2xl mx-auto space-y-4">
+      {/* ── Page Title (same pattern as original) ── */}
       <div className="flex items-center gap-4">
         <button
           onClick={() => navigate(-1)}
@@ -191,228 +244,267 @@ const CreateBooking = () => {
         </div>
       </div>
 
-      {/* Steps */}
-      <Card padding="sm">
-        <div className="flex items-center justify-between">
-          {steps.map((step, index) => {
-            const Icon = step.icon;
-            const isActive = currentStep === step.id;
-            const isCompleted = currentStep > step.id;
-
-            return (
-              <div key={step.id} className="flex items-center">
-                <div className="flex flex-col items-center">
-                  <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
-                      isActive
-                        ? "bg-sky-500 text-white"
-                        : isCompleted
-                        ? "bg-emerald-500 text-white"
-                        : "bg-slate-100 text-slate-400"
-                    }`}
-                  >
-                    {isCompleted ? (
-                      <Check className="w-5 h-5" />
-                    ) : (
-                      <Icon className="w-5 h-5" />
-                    )}
-                  </div>
-                  <span
-                    className={`mt-2 text-xs font-medium hidden sm:block ${
-                      isActive
-                        ? "text-sky-500"
-                        : isCompleted
-                        ? "text-emerald-500"
-                        : "text-slate-400"
-                    }`}
-                  >
-                    {step.title}
-                  </span>
-                </div>
-                {index < steps.length - 1 && (
-                  <div
-                    className={`w-12 sm:w-20 h-1 mx-2 rounded-full ${
-                      isCompleted ? "bg-emerald-500" : "bg-slate-100"
-                    }`}
-                  />
+      {/* ── Step Tabs ── */}
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+        {steps.map((step) => {
+          const Icon = step.icon;
+          const done = currentStep > step.id;
+          const active = currentStep === step.id;
+          return (
+            <div
+              key={step.id}
+              className={`flex items-center gap-2 shrink-0 px-3 py-2 rounded-xl border transition-all text-xs font-semibold ${
+                active
+                  ? "bg-sky-500 text-white border-sky-500 shadow-md shadow-sky-100"
+                  : done
+                    ? "bg-sky-50 text-sky-600 border-sky-200"
+                    : "bg-white text-slate-400 border-slate-200"
+              }`}
+            >
+              <div
+                className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                  active ? "bg-white/20" : done ? "bg-sky-100" : "bg-slate-100"
+                }`}
+              >
+                {done ? (
+                  <Check className="w-3 h-3" />
+                ) : (
+                  <Icon className="w-3 h-3" />
                 )}
               </div>
-            );
-          })}
-        </div>
-      </Card>
+              <span>{step.title}</span>
+            </div>
+          );
+        })}
+      </div>
 
-      {/* Step Content */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentStep}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.2 }}
-        >
-          {/* Step 1: Pilih Layanan */}
-          {currentStep === 1 && (
-            <Card>
-              <h2 className="text-lg font-semibold text-slate-800 mb-4">
-                Pilih Layanan Fisioterapi
-              </h2>
-              <div className="grid sm:grid-cols-2 gap-4">
-                {layanan.map((item) => (
-                  <motion.button
-                    key={item.id}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => handleLayananSelect(item)}
-                    className={`p-4 rounded-xl border-2 text-left transition-colors ${
-                      formData.id_layanan === item.id
-                        ? "border-sky-500 bg-sky-50"
-                        : "border-slate-200 hover:border-sky-200"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="font-semibold text-slate-800">
+      {/* ── Main Content ── */}
+      <div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentStep}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -16 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
+          >
+            {/* ════ STEP 1: Pilih Layanan ════ */}
+            {currentStep === 1 && (
+              <div className="space-y-3">
+                <SectionHeader
+                  icon={<Stethoscope className="w-4 h-4" />}
+                  title="Pilih Layanan Fisioterapi"
+                  sub="Pilih jenis layanan yang Anda butuhkan"
+                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {layanan.map((item, i) => {
+                    const selected = formData.id_layanan === item.id;
+                    return (
+                      <motion.button
+                        key={item.id}
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => handleLayananSelect(item)}
+                        className={`group relative text-left rounded-2xl border-2 p-4 transition-all duration-200 ${
+                          selected
+                            ? "border-sky-500 bg-linear-to-br from-sky-50 to-white shadow-lg shadow-sky-100"
+                            : "border-slate-200 bg-white hover:border-sky-200 hover:shadow-md"
+                        }`}
+                      >
+                        {selected && (
+                          <div className="absolute top-3 right-3 w-6 h-6 bg-sky-500 rounded-full flex items-center justify-center shadow-sm">
+                            <Check className="w-3.5 h-3.5 text-white" />
+                          </div>
+                        )}
+                        <h3
+                          className={`font-bold text-sm pr-8 ${selected ? "text-sky-700" : "text-slate-800"}`}
+                        >
                           {item.nama}
                         </h3>
-                        <p className="text-sm text-slate-500 mt-1 line-clamp-2">
+                        <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">
                           {item.deskripsi}
                         </p>
-                      </div>
-                      {formData.id_layanan === item.id && (
-                        <div className="w-6 h-6 bg-sky-500 rounded-full flex items-center justify-center shrink-0">
-                          <Check className="w-4 h-4 text-white" />
+                        <div
+                          className={`mt-3 pt-3 border-t flex items-center justify-between ${
+                            selected ? "border-sky-100" : "border-slate-100"
+                          }`}
+                        >
+                          <span
+                            className={`text-base font-extrabold ${selected ? "text-sky-600" : "text-sky-500"}`}
+                          >
+                            Rp {item.harga?.toLocaleString("id-ID")}
+                          </span>
+                          <span className="flex items-center gap-1 text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded-lg">
+                            <Clock className="w-3 h-3" />
+                            {item.durasi} mnt
+                          </span>
                         </div>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
-                      <span className="text-lg font-bold text-sky-500">
-                        Rp {item.harga?.toLocaleString("id-ID")}
-                      </span>
-                      <span className="text-sm text-slate-400">
-                        {item.durasi} menit
-                      </span>
-                    </div>
-                  </motion.button>
-                ))}
+                      </motion.button>
+                    );
+                  })}
+                </div>
               </div>
-            </Card>
-          )}
+            )}
 
-          {/* Step 2: Jadwal */}
-          {currentStep === 2 && (
-            <Card>
-              <h2 className="text-lg font-semibold text-slate-800 mb-4">
-                Pilih Tanggal & Waktu
-              </h2>
+            {/* ════ STEP 2: Jadwal ════ */}
+            {currentStep === 2 && (
               <div className="space-y-4">
-                <Input
-                  label="Tanggal"
-                  type="date"
-                  name="tanggal"
-                  value={formData.tanggal}
-                  onChange={handleChange}
-                  error={errors.tanggal}
-                  min={getMinDate()}
-                  max={getMaxDate()}
-                  leftIcon={Calendar}
+                <SectionHeader
+                  icon={<Calendar className="w-4 h-4" />}
+                  title="Pilih Tanggal & Waktu"
+                  sub="Tentukan jadwal kunjungan yang sesuai"
                 />
 
+                {/* Date picker card */}
+                <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                    Tanggal Kunjungan
+                  </label>
+                  <input
+                    type="date"
+                    name="tanggal"
+                    value={formData.tanggal}
+                    onChange={handleChange}
+                    min={getMinDate()}
+                    max={getMaxDate()}
+                    className={`w-full px-4 py-3 rounded-xl border text-sm font-medium text-slate-700 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition-all ${
+                      errors.tanggal ? "border-red-300" : "border-slate-200"
+                    }`}
+                  />
+                  {errors.tanggal && <ErrMsg msg={errors.tanggal} />}
+                  {formData.tanggal && (
+                    <p className="mt-2 text-xs text-sky-600 font-medium">
+                      📅 {formatDate(formData.tanggal)}
+                    </p>
+                  )}
+                </div>
+
+                {/* Time slots */}
                 {formData.tanggal && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Waktu Tersedia
-                    </label>
-                    {slotsLoading ? (
-                      <div className="flex items-center justify-center py-8">
-                        <div className="w-8 h-8 border-4 border-sky-500 border-t-transparent rounded-full animate-spin"></div>
-                        <span className="ml-3 text-slate-500">
-                          Memuat jadwal...
+                  <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                        Jam Tersedia
+                      </label>
+                      {slotsLoading && (
+                        <span className="text-xs text-sky-500 animate-pulse">
+                          Memuat...
                         </span>
+                      )}
+                    </div>
+
+                    {slotsLoading ? (
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                        {[...Array(8)].map((_, i) => (
+                          <div
+                            key={i}
+                            className="h-16 rounded-xl bg-slate-100 animate-pulse"
+                          />
+                        ))}
                       </div>
                     ) : availableSlots.length > 0 ? (
                       <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                         {availableSlots.map((slot) => {
                           const waktu =
                             slot.waktu_mulai?.slice(0, 5) || slot.waktu;
-                          const tersedia =
-                            slot.status === "tersedia" || slot.tersedia;
+                          const state = getSlotState(
+                            formData.tanggal,
+                            slot,
+                            bufferTimes,
+                          );
+                          const isSelected = formData.waktu === waktu;
                           return (
-                            <button
+                            <motion.button
                               key={slot.id || waktu}
+                              whileTap={!state.disabled ? { scale: 0.95 } : {}}
                               onClick={() =>
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  waktu: waktu,
-                                }))
+                                !state.disabled &&
+                                setFormData((prev) => ({ ...prev, waktu }))
                               }
-                              disabled={!tersedia}
-                              className={`p-3 rounded-lg text-sm font-medium transition-colors ${
-                                formData.waktu === waktu
-                                  ? "bg-sky-500 text-white"
-                                  : tersedia
-                                  ? "bg-slate-100 text-slate-700 hover:bg-sky-50"
-                                  : "bg-slate-50 text-slate-300 cursor-not-allowed"
+                              disabled={state.disabled}
+                              className={`relative flex flex-col items-center justify-center rounded-xl p-2.5 border-2 transition-all text-center ${
+                                isSelected
+                                  ? "border-sky-500 bg-sky-500 shadow-lg shadow-sky-200"
+                                  : state.disabled
+                                    ? "border-slate-100 bg-slate-50 cursor-not-allowed"
+                                    : "border-slate-200 bg-white hover:border-sky-300 hover:shadow-sm"
                               }`}
                             >
-                              {waktu}
-                            </button>
+                              <span
+                                className={`text-sm font-bold leading-tight ${
+                                  isSelected
+                                    ? "text-white"
+                                    : state.disabled
+                                      ? "text-slate-300"
+                                      : "text-slate-700"
+                                }`}
+                              >
+                                {waktu}
+                              </span>
+                              <StatusBadge
+                                label={state.label}
+                                className={
+                                  isSelected
+                                    ? "bg-white/20 text-white"
+                                    : state.color
+                                }
+                              />
+                              {isSelected && (
+                                <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-400 rounded-full flex items-center justify-center">
+                                  <Check className="w-2.5 h-2.5 text-white" />
+                                </div>
+                              )}
+                            </motion.button>
                           );
                         })}
                       </div>
                     ) : (
-                      <div className="p-4 bg-amber-50 border border-amber-100 rounded-xl flex items-center gap-3">
-                        <AlertCircle className="w-5 h-5 text-amber-500" />
-                        <p className="text-sm text-amber-700">
-                          Tidak ada jadwal tersedia untuk tanggal ini. Pastikan
-                          backend berjalan.
-                        </p>
+                      <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-100 rounded-xl">
+                        <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-semibold text-amber-800">
+                            Tidak ada jadwal tersedia
+                          </p>
+                          <p className="text-xs text-amber-600 mt-0.5">
+                            Coba pilih tanggal lain
+                          </p>
+                        </div>
                       </div>
                     )}
-                    {errors.waktu && (
-                      <p className="mt-2 text-sm text-red-500">
-                        {errors.waktu}
-                      </p>
-                    )}
+                    {errors.waktu && <ErrMsg msg={errors.waktu} />}
                   </div>
                 )}
               </div>
-            </Card>
-          )}
+            )}
 
-          {/* Step 3: Detail */}
-          {currentStep === 3 && (
-            <Card>
-              <h2 className="text-lg font-semibold text-slate-800 mb-4">
-                Informasi Detail
-              </h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Alamat Lengkap
-                  </label>
+            {/* ════ STEP 3: Detail ════ */}
+            {currentStep === 3 && (
+              <div className="space-y-3">
+                <SectionHeader
+                  icon={<MapPin className="w-4 h-4" />}
+                  title="Informasi Detail"
+                  sub="Lengkapi info kunjungan Anda"
+                />
+
+                <FormCard>
+                  <FieldLabel label="Alamat Lengkap" required />
                   <textarea
                     name="alamat"
                     value={formData.alamat}
                     onChange={handleChange}
                     rows={3}
-                    placeholder="Masukkan alamat lengkap untuk kunjungan fisioterapi..."
-                    className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 ${
+                    placeholder="Contoh: Jl. Mawar No. 12, RT 03/RW 05, Kelurahan..."
+                    className={`w-full px-4 py-3 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 resize-none bg-slate-50 focus:bg-white transition-all ${
                       errors.alamat ? "border-red-300" : "border-slate-200"
                     }`}
                   />
-                  {errors.alamat && (
-                    <p className="mt-1 text-sm text-red-500">{errors.alamat}</p>
-                  )}
-                </div>
+                  {errors.alamat && <ErrMsg msg={errors.alamat} />}
+                </FormCard>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Link Google Maps{" "}
-                    <span className="text-slate-400 font-normal">
-                      (opsional)
-                    </span>
-                  </label>
+                <FormCard>
+                  <FieldLabel label="Link Google Maps" optional />
                   <div className="relative">
                     <input
                       type="url"
@@ -420,179 +512,184 @@ const CreateBooking = () => {
                       value={formData.koordinat}
                       onChange={handleChange}
                       placeholder="https://maps.google.com/..."
-                      className="w-full px-4 py-3 pr-10 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500"
+                      className="w-full px-4 py-3 pr-11 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 bg-slate-50 focus:bg-white transition-all"
                     />
-                    <ExternalLink className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <ExternalLink className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   </div>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Bagikan lokasi dari Google Maps untuk memudahkan
-                    fisioterapis menemukan alamat Anda
+                  <p className="mt-1.5 text-xs text-slate-400 leading-relaxed">
+                    Bagikan pin lokasi agar fisioterapis mudah menemukan Anda
                   </p>
-                </div>
+                </FormCard>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Keluhan / Kondisi
-                  </label>
+                <FormCard>
+                  <FieldLabel label="Keluhan / Kondisi" required />
                   <textarea
                     name="keluhan"
                     value={formData.keluhan}
                     onChange={handleChange}
                     rows={3}
-                    placeholder="Jelaskan keluhan atau kondisi yang dialami..."
-                    className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 ${
+                    placeholder="Jelaskan keluhan yang dialami, misalnya: nyeri punggung bawah sejak 2 minggu lalu..."
+                    className={`w-full px-4 py-3 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 resize-none bg-slate-50 focus:bg-white transition-all ${
                       errors.keluhan ? "border-red-300" : "border-slate-200"
                     }`}
                   />
-                  {errors.keluhan && (
-                    <p className="mt-1 text-sm text-red-500">
-                      {errors.keluhan}
-                    </p>
-                  )}
-                </div>
+                  {errors.keluhan && <ErrMsg msg={errors.keluhan} />}
+                </FormCard>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Metode Pembayaran
-                  </label>
-                  <div className="grid sm:grid-cols-2 gap-3">
+                <FormCard>
+                  <FieldLabel label="Metode Pembayaran" />
+                  <div className="grid grid-cols-2 gap-3">
                     {[
                       {
                         value: "cash_on_visit",
                         label: "Bayar di Tempat",
-                        icon: CreditCard,
+                        icon: Banknote,
+                        sub: "Tunai saat kunjungan",
                       },
                       {
                         value: "transfer_on_visit",
                         label: "Transfer",
                         icon: CreditCard,
+                        sub: "Transfer bank",
                       },
-                    ].map((method) => {
-                      const Icon = method.icon;
+                    ].map((m) => {
+                      const Icon = m.icon;
+                      const active = formData.metode_pembayaran === m.value;
                       return (
                         <button
-                          key={method.value}
+                          key={m.value}
                           onClick={() =>
                             setFormData((prev) => ({
                               ...prev,
-                              metode_pembayaran: method.value,
+                              metode_pembayaran: m.value,
                             }))
                           }
-                          className={`p-4 rounded-xl border-2 flex items-center gap-3 transition-colors ${
-                            formData.metode_pembayaran === method.value
+                          className={`flex flex-col items-start gap-1 p-3 rounded-xl border-2 transition-all text-left ${
+                            active
                               ? "border-sky-500 bg-sky-50"
-                              : "border-slate-200 hover:border-sky-200"
+                              : "border-slate-200 bg-white hover:border-sky-200"
                           }`}
                         >
-                          <Icon className="w-5 h-5 text-slate-400" />
-                          <span className="font-medium text-slate-700">
-                            {method.label}
+                          <div
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                              active ? "bg-sky-500" : "bg-slate-100"
+                            }`}
+                          >
+                            <Icon
+                              className={`w-4 h-4 ${active ? "text-white" : "text-slate-500"}`}
+                            />
+                          </div>
+                          <span
+                            className={`text-xs font-bold ${active ? "text-sky-700" : "text-slate-700"}`}
+                          >
+                            {m.label}
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            {m.sub}
                           </span>
                         </button>
                       );
                     })}
                   </div>
+                </FormCard>
+              </div>
+            )}
+
+            {/* ════ STEP 4: Konfirmasi ════ */}
+            {currentStep === 4 && (
+              <div className="space-y-3">
+                <SectionHeader
+                  icon={<Check className="w-4 h-4" />}
+                  title="Konfirmasi Booking"
+                  sub="Periksa kembali detail sebelum mengirim"
+                />
+
+                {/* Summary card */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                  {/* Service highlight */}
+                  <div className="p-4 bg-slate-50 border-b border-slate-100">
+                    <p className="text-sm text-slate-500 mb-1">Layanan</p>
+                    <p className="font-semibold text-slate-800">
+                      {selectedLayanan?.nama}
+                    </p>
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className="text-lg font-bold text-sky-500">
+                        Rp {selectedLayanan?.harga?.toLocaleString("id-ID")}
+                      </span>
+                      <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                        {selectedLayanan?.durasi} mnt
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Detail rows */}
+                  <div className="divide-y divide-slate-100">
+                    <SummaryRow
+                      icon={<Calendar className="w-4 h-4 text-sky-400" />}
+                      label="Tanggal"
+                      value={formatDate(formData.tanggal)}
+                    />
+                    <SummaryRow
+                      icon={<Clock className="w-4 h-4 text-sky-400" />}
+                      label="Waktu"
+                      value={`${formData.waktu} WIB`}
+                    />
+                    <SummaryRow
+                      icon={<MapPin className="w-4 h-4 text-sky-400" />}
+                      label="Alamat"
+                      value={formData.alamat}
+                    />
+                    <SummaryRow
+                      icon={<FileText className="w-4 h-4 text-sky-400" />}
+                      label="Keluhan"
+                      value={formData.keluhan}
+                    />
+                    <SummaryRow
+                      icon={<CreditCard className="w-4 h-4 text-sky-400" />}
+                      label="Pembayaran"
+                      value={
+                        formData.metode_pembayaran === "cash_on_visit"
+                          ? "Bayar di Tempat"
+                          : "Transfer"
+                      }
+                    />
+                  </div>
+
+                  {/* Total */}
+                  <div className="p-4 bg-sky-50 border-t border-sky-100 flex items-center justify-between">
+                    <span className="font-medium text-slate-700">
+                      Total Pembayaran
+                    </span>
+                    <span className="text-2xl font-bold text-sky-500">
+                      Rp {selectedLayanan?.harga?.toLocaleString("id-ID")}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </Card>
-          )}
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </div>
 
-          {/* Step 4: Konfirmasi */}
-          {currentStep === 4 && (
-            <Card>
-              <h2 className="text-lg font-semibold text-slate-800 mb-4">
-                Konfirmasi Booking
-              </h2>
-              <div className="space-y-4">
-                {/* Service */}
-                <div className="p-4 bg-slate-50 rounded-xl">
-                  <p className="text-sm text-slate-500 mb-1">Layanan</p>
-                  <p className="font-semibold text-slate-800">
-                    {selectedLayanan?.nama}
-                  </p>
-                  <p className="text-sky-500 font-bold mt-1">
-                    Rp {selectedLayanan?.harga?.toLocaleString("id-ID")}
-                  </p>
-                </div>
-
-                {/* Schedule */}
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="p-4 bg-slate-50 rounded-xl">
-                    <p className="text-sm text-slate-500 mb-1">Tanggal</p>
-                    <p className="font-semibold text-slate-800">
-                      {formatDate(formData.tanggal)}
-                    </p>
-                  </div>
-                  <div className="p-4 bg-slate-50 rounded-xl">
-                    <p className="text-sm text-slate-500 mb-1">Waktu</p>
-                    <p className="font-semibold text-slate-800">
-                      {formData.waktu} WIB
-                    </p>
-                  </div>
-                </div>
-
-                {/* Address */}
-                <div className="p-4 bg-slate-50 rounded-xl">
-                  <p className="text-sm text-slate-500 mb-1">Alamat</p>
-                  <p className="font-semibold text-slate-800">
-                    {formData.alamat}
-                  </p>
-                </div>
-
-                {/* Keluhan */}
-                <div className="p-4 bg-slate-50 rounded-xl">
-                  <p className="text-sm text-slate-500 mb-1">Keluhan</p>
-                  <p className="font-semibold text-slate-800">
-                    {formData.keluhan}
-                  </p>
-                </div>
-
-                {/* Payment */}
-                <div className="p-4 bg-slate-50 rounded-xl">
-                  <p className="text-sm text-slate-500 mb-1">
-                    Metode Pembayaran
-                  </p>
-                  <p className="font-semibold text-slate-800">
-                    {formData.metode_pembayaran === "cash_on_visit"
-                      ? "Bayar di Tempat"
-                      : "Transfer"}
-                  </p>
-                </div>
-
-                {/* Total */}
-                <div className="p-4 bg-sky-50 border border-sky-100 rounded-xl flex items-center justify-between">
-                  <span className="font-medium text-slate-700">
-                    Total Pembayaran
-                  </span>
-                  <span className="text-2xl font-bold text-sky-500">
-                    Rp {selectedLayanan?.harga?.toLocaleString("id-ID")}
-                  </span>
-                </div>
-              </div>
-            </Card>
-          )}
-        </motion.div>
-      </AnimatePresence>
-
-      {/* Navigation */}
-      <div className="flex items-center justify-between">
+      {/* ── Navigation Buttons ── */}
+      <div className="flex items-center justify-between pt-2">
         <Button
           variant="secondary"
           onClick={prevStep}
           disabled={currentStep === 1}
         >
-          <ArrowLeft className="w-5 h-5" />
-          Kembali
+          <ArrowLeft className="w-4 h-4" />
+          <span className="hidden sm:inline">Kembali</span>
         </Button>
 
         {currentStep < 4 ? (
           <Button onClick={nextStep}>
             Lanjut
-            <ArrowRight className="w-5 h-5" />
+            <ArrowRight className="w-4 h-4" />
           </Button>
         ) : (
           <Button onClick={handleSubmit} loading={submitting}>
-            <Check className="w-5 h-5" />
+            <Check className="w-4 h-4" />
             Konfirmasi Booking
           </Button>
         )}
@@ -600,5 +697,57 @@ const CreateBooking = () => {
     </div>
   );
 };
+
+/* ─── Sub-components ─── */
+
+const SectionHeader = ({ icon, title, sub }) => (
+  <div className="flex items-start gap-3 mb-1">
+    <div className="w-8 h-8 rounded-xl bg-sky-100 flex items-center justify-center text-sky-600 shrink-0 mt-0.5">
+      {icon}
+    </div>
+    <div>
+      <h2 className="text-base font-bold text-slate-800">{title}</h2>
+      <p className="text-xs text-slate-400">{sub}</p>
+    </div>
+  </div>
+);
+
+const FormCard = ({ children }) => (
+  <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-2">
+    {children}
+  </div>
+);
+
+const FieldLabel = ({ label, required, optional }) => (
+  <label className="flex items-center gap-1 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+    {label}
+    {required && <span className="text-red-400">*</span>}
+    {optional && (
+      <span className="text-slate-300 font-normal normal-case tracking-normal">
+        (opsional)
+      </span>
+    )}
+  </label>
+);
+
+const ErrMsg = ({ msg }) => (
+  <p className="flex items-center gap-1 text-xs text-red-500 mt-1">
+    <AlertCircle className="w-3 h-3" /> {msg}
+  </p>
+);
+
+const SummaryRow = ({ icon, label, value }) => (
+  <div className="flex items-start gap-3 px-4 py-3">
+    <div className="shrink-0 mt-0.5">{icon}</div>
+    <div className="min-w-0">
+      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+        {label}
+      </p>
+      <p className="text-sm font-semibold text-slate-700 mt-0.5 whitespace-pre-wrap">
+        {value}
+      </p>
+    </div>
+  </div>
+);
 
 export default CreateBooking;

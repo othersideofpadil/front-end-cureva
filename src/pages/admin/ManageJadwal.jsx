@@ -2,11 +2,8 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Calendar,
-  Clock,
   ChevronLeft,
   ChevronRight,
-  ToggleLeft,
-  ToggleRight,
   Lock,
   Unlock,
   RefreshCw,
@@ -16,19 +13,8 @@ import toast from "react-hot-toast";
 import { jadwalService } from "../../services";
 import { Card, Button, LoadingSpinner, Badge } from "../../components/common";
 
-const HARI_NAMES = {
-  senin: "Senin",
-  selasa: "Selasa",
-  rabu: "Rabu",
-  kamis: "Kamis",
-  jumat: "Jumat",
-  sabtu: "Sabtu",
-  minggu: "Minggu",
-};
-
 const ManageJadwal = () => {
   const [loading, setLoading] = useState(true);
-  const [defaultSchedule, setDefaultSchedule] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
   const [slots, setSlots] = useState([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
@@ -36,7 +22,9 @@ const ManageJadwal = () => {
   const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
-    fetchDefaultSchedule();
+    const today = new Date().toISOString().split("T")[0];
+    setSelectedDate(today);
+    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -44,18 +32,6 @@ const ManageJadwal = () => {
       fetchSlots(selectedDate);
     }
   }, [selectedDate]);
-
-  const fetchDefaultSchedule = async () => {
-    try {
-      const response = await jadwalService.getDefault();
-      setDefaultSchedule(response.data || []);
-    } catch (error) {
-      console.error("Failed to fetch schedule:", error);
-      toast.error("Gagal memuat jadwal default");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const fetchSlots = async (date) => {
     setSlotsLoading(true);
@@ -67,30 +43,6 @@ const ManageJadwal = () => {
       setSlots([]);
     } finally {
       setSlotsLoading(false);
-    }
-  };
-
-  const handleToggleDay = async (hari, currentStatus) => {
-    try {
-      await jadwalService.updateDefault(hari, { is_active: !currentStatus });
-      toast.success(
-        `Jadwal ${HARI_NAMES[hari]} ${
-          currentStatus ? "dinonaktifkan" : "diaktifkan"
-        }`
-      );
-      fetchDefaultSchedule();
-    } catch (error) {
-      toast.error("Gagal mengubah status jadwal");
-    }
-  };
-
-  const handleUpdateTime = async (hari, waktu_mulai, waktu_selesai) => {
-    try {
-      await jadwalService.updateDefault(hari, { waktu_mulai, waktu_selesai });
-      toast.success("Jadwal berhasil diperbarui");
-      fetchDefaultSchedule();
-    } catch (error) {
-      toast.error("Gagal memperbarui jadwal");
     }
   };
 
@@ -115,12 +67,30 @@ const ManageJadwal = () => {
   };
 
   const handleSetHoliday = async (date) => {
+    if (!date) {
+      toast.error("Pilih tanggal terlebih dahulu");
+      return;
+    }
     try {
       await jadwalService.setHoliday(date);
       toast.success("Tanggal ditandai sebagai libur");
       fetchSlots(date);
     } catch (error) {
       toast.error("Gagal menandai libur");
+    }
+  };
+
+  const handleCancelHoliday = async (date) => {
+    if (!date) {
+      toast.error("Pilih tanggal terlebih dahulu");
+      return;
+    }
+    try {
+      await jadwalService.cancelHoliday(date);
+      toast.success("Libur dibatalkan untuk tanggal ini");
+      fetchSlots(date);
+    } catch (error) {
+      toast.error("Gagal membatalkan libur");
     }
   };
 
@@ -146,6 +116,20 @@ const ManageJadwal = () => {
 
   const formatTime = (timeStr) => timeStr?.slice(0, 5) || "";
 
+  const getTodayDateStr = () => new Date().toISOString().split("T")[0];
+
+  const isPastDate = (dateStr) => {
+    if (!dateStr) return false;
+    const todayStr = getTodayDateStr();
+    return dateStr < todayStr;
+  };
+
+  const isPastSlot = (dateStr, timeStr) => {
+    if (!dateStr || !timeStr) return false;
+    const date = new Date(`${dateStr}T${timeStr}`);
+    return !Number.isNaN(date.getTime()) && date < new Date();
+  };
+
   // Calendar logic
   const getDaysInMonth = (date) => {
     const year = date.getFullYear();
@@ -161,7 +145,7 @@ const ManageJadwal = () => {
     }
     for (let i = 1; i <= daysInMonth; i++) {
       const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(
-        i
+        i,
       ).padStart(2, "0")}`;
       const isToday = dateStr === new Date().toISOString().split("T")[0];
       days.push({
@@ -176,13 +160,13 @@ const ManageJadwal = () => {
 
   const prevMonth = () => {
     setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1)
+      new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1),
     );
   };
 
   const nextMonth = () => {
     setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1)
+      new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1),
     );
   };
 
@@ -190,6 +174,11 @@ const ManageJadwal = () => {
     month: "long",
     year: "numeric",
   });
+
+  const isSelectedHoliday =
+    selectedDate &&
+    slots.length > 0 &&
+    slots.every((slot) => slot.status === "libur");
 
   if (loading) {
     return <LoadingSpinner fullScreen />;
@@ -213,98 +202,9 @@ const ManageJadwal = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Default Schedule */}
-        <Card>
-          <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-            <Clock className="w-5 h-5 text-sky-500" />
-            Jadwal Default Mingguan
-          </h3>
-          <div className="space-y-3">
-            {Object.keys(HARI_NAMES).map((hari) => {
-              const schedule = defaultSchedule.find(
-                (s) => s.hari?.toLowerCase() === hari
-              );
-              const isActive = schedule?.is_active;
-
-              return (
-                <div
-                  key={hari}
-                  className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl ${
-                    isActive ? "bg-slate-50" : "bg-slate-100"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => handleToggleDay(hari, isActive)}
-                      className={`p-1 rounded-lg transition-colors ${
-                        isActive
-                          ? "text-emerald-500 hover:bg-emerald-50"
-                          : "text-slate-400 hover:bg-slate-200"
-                      }`}
-                    >
-                      {isActive ? (
-                        <ToggleRight className="w-6 h-6" />
-                      ) : (
-                        <ToggleLeft className="w-6 h-6" />
-                      )}
-                    </button>
-                    <span
-                      className={`font-medium ${
-                        isActive ? "text-slate-800" : "text-slate-400"
-                      }`}
-                    >
-                      {HARI_NAMES[hari]}
-                    </span>
-                  </div>
-                  {isActive ? (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="time"
-                        defaultValue={formatTime(schedule?.waktu_mulai)}
-                        onBlur={(e) => {
-                          if (
-                            e.target.value !== formatTime(schedule?.waktu_mulai)
-                          ) {
-                            handleUpdateTime(
-                              hari,
-                              e.target.value,
-                              formatTime(schedule?.waktu_selesai)
-                            );
-                          }
-                        }}
-                        className="px-2 py-1 border border-slate-200 rounded-lg text-sm w-24"
-                      />
-                      <span className="text-slate-400">-</span>
-                      <input
-                        type="time"
-                        defaultValue={formatTime(schedule?.waktu_selesai)}
-                        onBlur={(e) => {
-                          if (
-                            e.target.value !==
-                            formatTime(schedule?.waktu_selesai)
-                          ) {
-                            handleUpdateTime(
-                              hari,
-                              formatTime(schedule?.waktu_mulai),
-                              e.target.value
-                            );
-                          }
-                        }}
-                        className="px-2 py-1 border border-slate-200 rounded-lg text-sm w-24"
-                      />
-                    </div>
-                  ) : (
-                    <span className="text-slate-400 text-sm">Libur</span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-
         {/* Calendar */}
         <Card>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
             <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
               <Calendar className="w-5 h-5 text-sky-500" />
               Kelola Slot Harian
@@ -316,7 +216,7 @@ const ManageJadwal = () => {
               >
                 <ChevronLeft className="w-5 h-5 text-slate-600" />
               </button>
-              <span className="font-medium text-slate-700 min-w-35 text-center">
+              <span className="font-medium text-slate-700 min-w-36 text-center">
                 {monthYear}
               </span>
               <button
@@ -326,6 +226,37 @@ const ManageJadwal = () => {
                 <ChevronRight className="w-5 h-5 text-slate-600" />
               </button>
             </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div>
+              <p className="text-sm text-slate-500">Tanggal terpilih</p>
+              <p className="text-sm font-medium text-slate-800">
+                {selectedDate
+                  ? new Date(selectedDate).toLocaleDateString("id-ID", {
+                      weekday: "long",
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })
+                  : "Belum dipilih"}
+              </p>
+            </div>
+            <Button
+              variant={isSelectedHoliday ? "primary" : "secondary"}
+              size="sm"
+              onClick={() =>
+                isSelectedHoliday
+                  ? handleCancelHoliday(selectedDate)
+                  : handleSetHoliday(selectedDate)
+              }
+              disabled={!selectedDate}
+              className="text-xs px-2.5 py-1 leading-tight"
+            >
+              {isSelectedHoliday
+                ? "Batalkan Libur Tanggal Ini"
+                : "Tandai Libur Tanggal Ini"}
+            </Button>
           </div>
 
           <div className="grid grid-cols-7 gap-1 mb-2">
@@ -348,6 +279,7 @@ const ManageJadwal = () => {
                 className={`
                   aspect-square flex items-center justify-center rounded-lg text-xs sm:text-sm font-medium transition-all
                   ${!item.day ? "invisible" : ""}
+                  ${item.date && isPastDate(item.date) && !item.isSelected ? "text-slate-300" : ""}
                   ${item.isSelected ? "bg-sky-500 text-white" : ""}
                   ${
                     item.isToday && !item.isSelected
@@ -362,91 +294,118 @@ const ManageJadwal = () => {
             ))}
           </div>
         </Card>
-      </div>
 
-      {/* Slots for Selected Date */}
-      {selectedDate && (
+        {/* Slots for Selected Date */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <Card>
-            <div className="flex items-center justify-between mb-4">
+          <Card className="h-full">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <h3 className="text-lg font-semibold text-slate-800">
-                Slot Waktu -{" "}
-                {new Date(selectedDate).toLocaleDateString("id-ID", {
-                  weekday: "long",
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                })}
+                Slot Waktu
+                {selectedDate
+                  ? ` - ${new Date(selectedDate).toLocaleDateString("id-ID", {
+                      weekday: "long",
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}`
+                  : ""}
               </h3>
               <Button
-                variant="secondary"
+                variant={isSelectedHoliday ? "primary" : "secondary"}
                 size="sm"
-                onClick={() => handleSetHoliday(selectedDate)}
+                onClick={() =>
+                  isSelectedHoliday
+                    ? handleCancelHoliday(selectedDate)
+                    : handleSetHoliday(selectedDate)
+                }
+                disabled={!selectedDate}
+                className="text-xs px-2.5 py-1 leading-tight"
               >
-                Tandai Libur
+                {isSelectedHoliday
+                  ? "Batalkan Libur Tanggal Ini"
+                  : "Tandai Libur Tanggal Ini"}
               </Button>
             </div>
 
-            {slotsLoading ? (
+            {!selectedDate ? (
+              <div className="text-center py-10 text-slate-500 flex flex-col items-center gap-2">
+                <AlertCircle className="w-8 h-8 text-slate-300" />
+                <p>Pilih tanggal untuk melihat slot</p>
+              </div>
+            ) : slotsLoading ? (
               <div className="py-8">
                 <LoadingSpinner />
               </div>
             ) : slots.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                {slots.map((slot) => (
-                  <div
-                    key={slot.id}
-                    className={`p-3 rounded-xl text-center border-2 ${
-                      slot.status === "tersedia"
-                        ? "border-emerald-200 bg-emerald-50"
-                        : slot.status === "dipesan"
-                        ? "border-sky-200 bg-sky-50"
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+                {slots.map((slot) => {
+                  const pastSlot =
+                    isPastDate(selectedDate) ||
+                    isPastSlot(selectedDate, formatTime(slot.waktu_mulai));
+                  const statusLabel =
+                    slot.status === "tersedia"
+                      ? "Tersedia"
+                      : slot.status === "dipesan"
+                        ? "Terpesan"
                         : slot.status === "diblock_admin"
-                        ? "border-red-200 bg-red-50"
-                        : "border-slate-200 bg-slate-100"
-                    }`}
-                  >
-                    <span className="font-medium text-sm">
-                      {formatTime(slot.waktu_mulai)}
-                    </span>
-                    <Badge
-                      variant={
+                          ? "Diblokir"
+                          : "Libur";
+                  const statusClass =
+                    slot.status === "tersedia"
+                      ? "bg-emerald-100 text-emerald-700"
+                      : slot.status === "dipesan"
+                        ? "bg-sky-100 text-sky-700"
+                        : slot.status === "diblock_admin"
+                          ? "bg-red-100 text-red-700"
+                          : "bg-slate-100 text-slate-600";
+
+                  return (
+                    <div
+                      key={slot.id}
+                      className={`p-3 sm:p-4 rounded-lg text-center border min-h-26 ${
                         slot.status === "tersedia"
-                          ? "success"
+                          ? "border-emerald-200"
                           : slot.status === "dipesan"
-                          ? "info"
-                          : "danger"
-                      }
-                      className="mt-1 text-xs"
+                            ? "border-sky-200"
+                            : slot.status === "diblock_admin"
+                              ? "border-red-200"
+                              : "border-slate-200"
+                      } ${pastSlot ? "opacity-60" : ""}`}
                     >
-                      {slot.status === "tersedia" && "Tersedia"}
-                      {slot.status === "dipesan" && "Terpesan"}
-                      {slot.status === "diblock_admin" && "Diblokir"}
-                      {slot.status === "libur" && "Libur"}
-                    </Badge>
-                    {slot.status === "tersedia" && (
-                      <button
-                        onClick={() => handleBlockSlot(slot.id)}
-                        className="mt-2 flex items-center justify-center gap-1 w-full text-xs text-red-600 hover:bg-red-100 rounded-lg py-1"
-                      >
-                        <Lock className="w-3 h-3" />
-                        Blokir
-                      </button>
-                    )}
-                    {slot.status === "diblock_admin" && (
-                      <button
-                        onClick={() => handleUnblockSlot(slot.id)}
-                        className="mt-2 flex items-center justify-center gap-1 w-full text-xs text-emerald-600 hover:bg-emerald-100 rounded-lg py-1"
-                      >
-                        <Unlock className="w-3 h-3" />
-                        Buka
-                      </button>
-                    )}
-                  </div>
-                ))}
+                      <div className="flex flex-col items-center gap-2">
+                        <span className="font-semibold text-lg sm:text-xl">
+                          {formatTime(slot.waktu_mulai)}
+                        </span>
+                        <div
+                          className={`inline-flex px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${statusClass}`}
+                        >
+                          {statusLabel}
+                        </div>
+                        {slot.status === "tersedia" && (
+                          <button
+                            onClick={() => handleBlockSlot(slot.id)}
+                            className="inline-flex items-center justify-center gap-1 text-sm sm:text-base text-red-600 hover:bg-red-100 rounded-md px-3.5 py-1.5"
+                          >
+                            <Lock className="w-3 h-3" />
+                            Blokir
+                          </button>
+                        )}
+                        {slot.status === "diblock_admin" && (
+                          <button
+                            onClick={() => handleUnblockSlot(slot.id)}
+                            className="inline-flex items-center justify-center gap-1 text-sm sm:text-base text-emerald-600 hover:bg-emerald-100 rounded-md px-3.5 py-1.5"
+                          >
+                            <Unlock className="w-3 h-3" />
+                            Buka
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-8 text-slate-500 flex flex-col items-center gap-2">
@@ -459,7 +418,7 @@ const ManageJadwal = () => {
             )}
           </Card>
         </motion.div>
-      )}
+      </div>
     </div>
   );
 };

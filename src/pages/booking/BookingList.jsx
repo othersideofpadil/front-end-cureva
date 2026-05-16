@@ -6,10 +6,12 @@ import {
   Clock,
   MapPin,
   Search,
-  Filter,
+  SlidersHorizontal,
   Plus,
   Eye,
   ChevronDown,
+  X,
+  FileX,
 } from "lucide-react";
 import { bookingService } from "../../services";
 import {
@@ -20,6 +22,18 @@ import {
   EmptyState,
   Input,
 } from "../../components/common";
+
+const statusOptions = [
+  { value: "all", label: "Semua Status" },
+  { value: "menunggu_konfirmasi", label: "Menunggu Konfirmasi" },
+  { value: "dikonfirmasi", label: "Dikonfirmasi" },
+  { value: "dijadwalkan", label: "Dijadwalkan" },
+  { value: "dalam_perjalanan", label: "Dalam Perjalanan" },
+  { value: "sedang_berlangsung", label: "Sedang Berlangsung" },
+  { value: "selesai", label: "Selesai" },
+  { value: "ditolak", label: "Ditolak" },
+  { value: "dibatalkan_pasien", label: "Dibatalkan" },
+];
 
 const BookingList = () => {
   const [loading, setLoading] = useState(true);
@@ -57,7 +71,7 @@ const BookingList = () => {
         (b) =>
           b.kode_booking?.toLowerCase().includes(searchLower) ||
           b.nama_layanan?.toLowerCase().includes(searchLower) ||
-          b.alamat?.toLowerCase().includes(searchLower)
+          b.alamat?.toLowerCase().includes(searchLower),
       );
     }
 
@@ -68,197 +82,280 @@ const BookingList = () => {
     setFilteredBookings(filtered);
   };
 
-  const formatDate = (dateStr) => {
-    return new Date(dateStr).toLocaleDateString("id-ID", {
+  const formatDate = (dateStr) =>
+    new Date(dateStr).toLocaleDateString("id-ID", {
       weekday: "short",
       day: "numeric",
       month: "short",
       year: "numeric",
     });
-  };
 
-  const formatTime = (timeStr) => {
-    return timeStr?.slice(0, 5) || "";
-  };
+  const formatTime = (timeStr) => timeStr?.slice(0, 5) || "";
 
-  const statusOptions = [
-    { value: "all", label: "Semua Status" },
-    { value: "menunggu_konfirmasi", label: "Menunggu Konfirmasi" },
-    { value: "dikonfirmasi", label: "Dikonfirmasi" },
-    { value: "dijadwalkan", label: "Dijadwalkan" },
-    { value: "dalam_perjalanan", label: "Dalam Perjalanan" },
-    { value: "sedang_berlangsung", label: "Sedang Berlangsung" },
-    { value: "selesai", label: "Selesai" },
-    { value: "ditolak", label: "Ditolak" },
-    { value: "dibatalkan_pasien", label: "Dibatalkan" },
-  ];
+  const formatPrice = (price) => `Rp ${(price || 0).toLocaleString("id-ID")}`;
 
-  if (loading) {
-    return <LoadingSpinner fullScreen />;
-  }
+  const activeFilterLabel =
+    statusOptions.find((o) => o.value === statusFilter)?.label ||
+    "Semua Status";
+
+  const hasActiveFilter = statusFilter !== "all" || search !== "";
+
+  if (loading) return <LoadingSpinner fullScreen />;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Booking Saya</h1>
-          <p className="text-slate-500">
-            Kelola semua pemesanan fisioterapi Anda
-          </p>
+    <div className="min-h-screen bg-slate-50">
+      {/* ── Sticky top bar on mobile ── */}
+      <div className="sticky top-0 z-10 bg-slate-50/90 backdrop-blur border-b border-slate-200 px-4 py-3 sm:hidden">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-lg font-bold text-slate-800 leading-tight">
+              Booking Saya
+            </h1>
+            <p className="text-[11px] text-slate-400 leading-none mt-0.5">
+              {filteredBookings.length} booking
+            </p>
+          </div>
+          <Link to="/bookings/new">
+            <Button size="sm" leftIcon={Plus}>
+              Baru
+            </Button>
+          </Link>
         </div>
-        <Link to="/bookings/new">
-          <Button>
-            <Plus className="w-5 h-5" />
-            Booking Baru
-          </Button>
-        </Link>
       </div>
 
-      {/* Search & Filter */}
-      <Card padding="sm">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
-            <Input
-              placeholder="Cari kode booking, layanan, atau alamat..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              leftIcon={Search}
-            />
+      <div className="px-4 py-5 sm:py-8 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto space-y-5">
+          {/* ── Header — desktop only ── */}
+          <div className="hidden sm:flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-800 sm:text-3xl">
+                Booking Saya
+              </h1>
+              <p className="mt-0.5 text-sm text-slate-500">
+                Kelola semua pemesanan fisioterapi Anda
+              </p>
+            </div>
+            <Link to="/bookings/new">
+              <Button className="flex items-center gap-2 px-5 py-2.5 rounded-xl shadow-sm text-sm font-semibold">
+                <Plus className="w-4 h-4" />
+                <span>Booking Baru</span>
+              </Button>
+            </Link>
           </div>
-          <div className="flex gap-2">
-            <div className="relative">
+
+          {/* ── Search & Filter bar ── */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-3 sm:p-4 space-y-3">
+            {/* Row: search + filter toggle */}
+            <div className="flex gap-2">
+              {/* Search */}
+              <div className="relative flex-1 min-w-0">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Cari kode, layanan…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full pl-9 pr-8 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50 placeholder-slate-400 text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-sky-400 transition"
+                />
+                {search && (
+                  <button
+                    onClick={() => setSearch("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Filter toggle */}
               <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 px-4 py-3 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-colors"
-              >
-                <Filter className="w-5 h-5" />
-                Filter
-                <ChevronDown
-                  className={`w-4 h-4 transition-transform ${
-                    showFilters ? "rotate-180" : ""
+                onClick={() => setShowFilters((v) => !v)}
+                className={`flex items-center gap-1.5 px-3 sm:px-3.5 py-2.5 rounded-xl border text-sm font-medium transition-colors shrink-0
+                  ${
+                    showFilters
+                      ? "bg-sky-50 border-sky-300 text-sky-700"
+                      : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
                   }`}
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+                <span className="hidden sm:inline">Filter</span>
+                {statusFilter !== "all" && (
+                  <span className="flex items-center justify-center w-4 h-4 rounded-full bg-sky-500 text-white text-[10px] font-bold leading-none">
+                    1
+                  </span>
+                )}
+                <ChevronDown
+                  className={`w-3.5 h-3.5 transition-transform ${showFilters ? "rotate-180" : ""}`}
                 />
               </button>
+            </div>
 
-              <AnimatePresence>
-                {showFilters && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-100 py-2 z-10"
-                  >
-                    {statusOptions.map((option) => (
+            {/* Filter chips (animated) */}
+            <AnimatePresence>
+              {showFilters && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {statusOptions.map((opt) => (
                       <button
-                        key={option.value}
+                        key={opt.value}
                         onClick={() => {
-                          setStatusFilter(option.value);
+                          setStatusFilter(opt.value);
                           setShowFilters(false);
                         }}
-                        className={`w-full px-4 py-2 text-left text-sm hover:bg-slate-50 ${
-                          statusFilter === option.value
-                            ? "text-sky-600 bg-sky-50"
-                            : "text-slate-600"
-                        }`}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors
+                          ${
+                            statusFilter === opt.value
+                              ? "bg-sky-500 border-sky-500 text-white"
+                              : "bg-white border-slate-200 text-slate-600 hover:border-sky-300 hover:text-sky-600"
+                          }`}
                       >
-                        {option.label}
+                        {opt.label}
                       </button>
                     ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-        </div>
-      </Card>
 
-      {/* Booking List */}
-      {filteredBookings.length > 0 ? (
-        <div className="space-y-4">
-          {filteredBookings.map((booking, index) => (
-            <motion.div
-              key={booking.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-            >
-              <Card hover padding="none" className="overflow-hidden">
-                <div className="p-5">
-                  <div className="flex flex-col md:flex-row md:items-center gap-4">
-                    {/* Info */}
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <p className="font-semibold text-slate-800">
+          {/* ── Active filter summary ── */}
+          {hasActiveFilter && (
+            <div className="flex items-center justify-between text-sm">
+              <p className="text-slate-500">
+                <span className="font-semibold text-slate-700">
+                  {filteredBookings.length}
+                </span>{" "}
+                hasil
+                {statusFilter !== "all" && (
+                  <span className="text-sky-600"> · {activeFilterLabel}</span>
+                )}
+              </p>
+              <button
+                onClick={() => {
+                  setSearch("");
+                  setStatusFilter("all");
+                }}
+                className="text-slate-400 hover:text-sky-600 transition-colors underline underline-offset-2 text-xs"
+              >
+                Reset filter
+              </button>
+            </div>
+          )}
+
+          {/* ── Booking Cards ── */}
+          {filteredBookings.length > 0 ? (
+            <div className="space-y-3">
+              {filteredBookings.map((booking, index) => (
+                <motion.div
+                  key={booking.id}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.04, duration: 0.25 }}
+                >
+                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden hover:shadow-md hover:border-slate-300 transition-all duration-200">
+                    {/* Card body */}
+                    <div className="p-4 sm:p-5">
+                      {/* Top row: nama layanan + badge */}
+                      <div className="flex items-start justify-between gap-2 mb-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-slate-800 text-sm sm:text-base leading-snug truncate">
                             {booking.nama_layanan || "Fisioterapi"}
                           </p>
-                          <p className="text-sm text-slate-400">
+                          <p className="text-[11px] text-slate-400 font-mono tracking-wide mt-0.5">
                             {booking.kode_booking}
                           </p>
                         </div>
-                        <Badge status={booking.status} />
+                        <div className="shrink-0 mt-0.5">
+                          <Badge status={booking.status} />
+                        </div>
                       </div>
 
-                      <div className="flex flex-wrap gap-4 text-sm text-slate-600">
-                        <div className="flex items-center gap-1.5">
-                          <Calendar className="w-4 h-4 text-slate-400" />
+                      {/* Meta info — stacked on mobile, row on sm+ */}
+                      <div className="grid grid-cols-1 gap-1.5 sm:flex sm:flex-wrap sm:gap-x-4 sm:gap-y-1.5 text-xs text-slate-500">
+                        <span className="flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                           {formatDate(booking.tanggal)}
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <Clock className="w-4 h-4 text-slate-400" />
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                           {formatTime(booking.waktu)} WIB
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <MapPin className="w-4 h-4 text-slate-400" />
-                          <span className="truncate max-w-50">
-                            {booking.alamat}
-                          </span>
-                        </div>
+                        </span>
+                        <span className="flex items-center gap-1.5 min-w-0">
+                          <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span className="truncate">{booking.alamat}</span>
+                        </span>
                       </div>
                     </div>
 
-                    {/* Actions */}
-                    <div className="flex items-center gap-2">
+                    {/* Card footer — harga + tombol detail */}
+                    <div className="px-4 sm:px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-3">
+                      {/* Harga */}
+                      <div>
+                        <span className="text-[11px] text-slate-400 block leading-none mb-0.5">
+                          Total Biaya
+                        </span>
+                        <span className="text-sm font-bold text-slate-800">
+                          {formatPrice(booking.harga_layanan)}
+                        </span>
+                      </div>
+
+                      {/* Tombol detail */}
                       <Link to={`/bookings/${booking.id}`}>
-                        <Button variant="secondary" size="sm">
-                          <Eye className="w-4 h-4" />
+                        <Button variant="secondary" size="sm" leftIcon={Eye}>
                           Detail
                         </Button>
                       </Link>
                     </div>
                   </div>
-                </div>
-
-                {/* Price */}
-                <div className="px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-                  <span className="text-sm text-slate-500">Total Biaya</span>
-                  <span className="font-bold text-slate-800">
-                    Rp {(booking.harga_layanan || 0).toLocaleString("id-ID")}
-                  </span>
-                </div>
-              </Card>
-            </motion.div>
-          ))}
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            /* ── Empty state ── */
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 flex flex-col items-center text-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400">
+                <FileX className="w-7 h-7" />
+              </div>
+              <div>
+                <p className="font-semibold text-slate-700">
+                  {search || statusFilter !== "all"
+                    ? "Tidak ada hasil ditemukan"
+                    : "Belum ada booking"}
+                </p>
+                <p className="text-sm text-slate-400 mt-1 max-w-xs">
+                  {search || statusFilter !== "all"
+                    ? "Coba ubah kata kunci atau filter yang digunakan."
+                    : "Anda belum memiliki riwayat booking fisioterapi."}
+                </p>
+              </div>
+              {search || statusFilter !== "all" ? (
+                <button
+                  onClick={() => {
+                    setSearch("");
+                    setStatusFilter("all");
+                  }}
+                  className="px-5 py-2.5 rounded-xl text-sm font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors min-h-10"
+                >
+                  Reset Filter
+                </button>
+              ) : (
+                <Link to="/bookings/new">
+                  <button className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-sky-500 text-white hover:bg-sky-600 transition-colors min-h-10">
+                    <Plus className="w-4 h-4" />
+                    Buat Booking Pertama
+                  </button>
+                </Link>
+              )}
+            </div>
+          )}
         </div>
-      ) : (
-        <Card>
-          <EmptyState
-            icon={Calendar}
-            title="Tidak ada booking"
-            description={
-              search || statusFilter !== "all"
-                ? "Tidak ada booking yang sesuai dengan filter"
-                : "Anda belum memiliki riwayat booking"
-            }
-            action={() => {
-              setSearch("");
-              setStatusFilter("all");
-            }}
-            actionLabel="Reset Filter"
-          />
-        </Card>
-      )}
+      </div>
     </div>
   );
 };

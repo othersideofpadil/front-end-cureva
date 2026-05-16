@@ -1,47 +1,39 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
-  BarChart3,
   TrendingUp,
   Calendar,
-  DollarSign,
   Users,
   FileText,
   Download,
   CheckCircle,
   Clock,
   XCircle,
-  AlertCircle,
 } from "lucide-react";
 import {
   LineChart,
   Line,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from "recharts";
-import { adminService, bookingService } from "../../services";
+import { adminService, bookingService, paymentService } from "../../services";
 import { Card, Button, LoadingSpinner, Badge } from "../../components/common";
 
 const Reports = () => {
   const [loading, setLoading] = useState(true);
   const [chartPeriod, setChartPeriod] = useState("monthly");
   const [windowWidth, setWindowWidth] = useState(
-    typeof window !== "undefined" ? window.innerWidth : 1024
+    typeof window !== "undefined" ? window.innerWidth : 1024,
   );
   const [stats, setStats] = useState({
     overview: {},
     month_stats: {},
     recent_bookings: [],
   });
+  const [payments, setPayments] = useState([]);
   const [recentBookings, setRecentBookings] = useState([]);
   const [dateRange, setDateRange] = useState("month");
 
@@ -60,12 +52,21 @@ const Reports = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [statsRes, bookingsRes] = await Promise.all([
+      const [statsRes, bookingsRes, paymentsRes] = await Promise.all([
         adminService.getDashboard(),
         bookingService.getAll({ limit: 10 }),
+        paymentService.getAll(),
       ]);
       setStats(statsRes.data || { overview: {}, month_stats: {} });
       setRecentBookings(bookingsRes.data || []);
+      const paymentRows = Array.isArray(paymentsRes?.data)
+        ? paymentsRes.data
+        : Array.isArray(paymentsRes?.data?.data)
+          ? paymentsRes.data.data
+          : Array.isArray(paymentsRes)
+            ? paymentsRes
+            : [];
+      setPayments(paymentRows);
     } catch (error) {
       console.error("Failed to fetch report data:", error);
     } finally {
@@ -89,12 +90,149 @@ const Reports = () => {
     });
   };
 
+  const getPaymentDate = (payment) => {
+    const rawDate =
+      payment?.tanggal_pembayaran ||
+      payment?.created_at ||
+      payment?.createdAt ||
+      payment?.tanggal;
+    if (!rawDate) return null;
+    const parsed = new Date(rawDate);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const getRangeStart = (range) => {
+    const now = new Date();
+    const start = new Date(now);
+
+    if (range === "week") {
+      start.setDate(now.getDate() - 6);
+    } else if (range === "month") {
+      start.setDate(now.getDate() - 29);
+    } else if (range === "year") {
+      start.setMonth(now.getMonth() - 11);
+      start.setDate(1);
+    } else {
+      start.setDate(now.getDate() - 29);
+    }
+
+    start.setHours(0, 0, 0, 0);
+    return start;
+  };
+
+  const buildRevenueData = (paymentList, period) => {
+    const now = new Date();
+
+    if (period === "daily") {
+      const start = new Date(now);
+      start.setDate(now.getDate() - 6);
+      start.setHours(0, 0, 0, 0);
+
+      const formatter = new Intl.DateTimeFormat("id-ID", { weekday: "short" });
+      const buckets = [];
+      const bucketMap = new Map();
+
+      for (let i = 0; i < 7; i += 1) {
+        const date = new Date(start);
+        date.setDate(start.getDate() + i);
+        const key = date.getTime();
+        const item = { name: formatter.format(date), revenue: 0, key };
+        buckets.push(item);
+        bucketMap.set(key, item);
+      }
+
+      paymentList.forEach((payment) => {
+        const date = getPaymentDate(payment);
+        if (!date) return;
+        const key = new Date(
+          date.getFullYear(),
+          date.getMonth(),
+          date.getDate(),
+        ).getTime();
+        const bucket = bucketMap.get(key);
+        if (bucket) {
+          bucket.revenue += Number(payment.jumlah) || 0;
+        }
+      });
+
+      return buckets.map(({ name, revenue }) => ({ name, revenue }));
+    }
+
+    if (period === "weekly") {
+      const startOfWeek = (dateValue) => {
+        const date = new Date(dateValue);
+        const day = date.getDay() || 7;
+        date.setDate(date.getDate() - day + 1);
+        date.setHours(0, 0, 0, 0);
+        return date;
+      };
+
+      const thisWeekStart = startOfWeek(now);
+      const buckets = [];
+      const bucketMap = new Map();
+
+      for (let i = 3; i >= 0; i -= 1) {
+        const weekStart = new Date(thisWeekStart);
+        weekStart.setDate(thisWeekStart.getDate() - i * 7);
+        const key = weekStart.getTime();
+        const item = { name: `Minggu ${4 - i}`, revenue: 0, key };
+        buckets.push(item);
+        bucketMap.set(key, item);
+      }
+
+      paymentList.forEach((payment) => {
+        const date = getPaymentDate(payment);
+        if (!date) return;
+        const weekKey = startOfWeek(date).getTime();
+        const bucket = bucketMap.get(weekKey);
+        if (bucket) {
+          bucket.revenue += Number(payment.jumlah) || 0;
+        }
+      });
+
+      return buckets.map(({ name, revenue }) => ({ name, revenue }));
+    }
+
+    const formatter = new Intl.DateTimeFormat("id-ID", { month: "short" });
+    const buckets = [];
+    const bucketMap = new Map();
+
+    for (let i = 5; i >= 0; i -= 1) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${date.getFullYear()}-${date.getMonth()}`;
+      const item = { name: formatter.format(date), revenue: 0, key };
+      buckets.push(item);
+      bucketMap.set(key, item);
+    }
+
+    paymentList.forEach((payment) => {
+      const date = getPaymentDate(payment);
+      if (!date) return;
+      const key = `${date.getFullYear()}-${date.getMonth()}`;
+      const bucket = bucketMap.get(key);
+      if (bucket) {
+        bucket.revenue += Number(payment.jumlah) || 0;
+      }
+    });
+
+    return buckets.map(({ name, revenue }) => ({ name, revenue }));
+  };
+
   if (loading) {
     return <LoadingSpinner fullScreen />;
   }
 
   const overview = stats.overview || {};
   const monthStats = stats.month_stats || {};
+  const paidPayments = payments.filter(
+    (payment) => payment.status === "dibayar",
+  );
+  const rangeStart = getRangeStart(dateRange);
+  const filteredPayments = paidPayments.filter((payment) => {
+    const date = getPaymentDate(payment);
+    return date && date >= rangeStart;
+  });
+  const revenueData = buildRevenueData(filteredPayments, chartPeriod);
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -131,18 +269,13 @@ const Reports = () => {
           animate={{ opacity: 1, y: 0 }}
         >
           <Card className="bg-linear-to-br from-sky-500 to-indigo-500 text-white">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs sm:text-sm text-sky-100">
-                  Total Pendapatan
-                </p>
-                <p className="text-lg sm:text-2xl font-bold mt-1">
-                  {formatPrice(overview.total_pendapatan)}
-                </p>
-              </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
-                <DollarSign className="w-5 h-5 sm:w-6 sm:h-6" />
-              </div>
+            <div>
+              <p className="text-xs sm:text-sm text-sky-100">
+                Total Pendapatan
+              </p>
+              <p className="text-lg sm:text-2xl font-bold mt-1">
+                {formatPrice(overview.total_pendapatan)}
+              </p>
             </div>
             <div className="flex items-center gap-1 mt-3 text-sky-100 text-xs sm:text-sm">
               <TrendingUp className="w-4 h-4" />
@@ -242,35 +375,7 @@ const Reports = () => {
           width="100%"
           height={windowWidth < 640 ? 280 : 350}
         >
-          <LineChart
-            data={
-              chartPeriod === "daily"
-                ? [
-                    { name: "Sen", revenue: 1800000 },
-                    { name: "Sel", revenue: 2200000 },
-                    { name: "Rab", revenue: 1950000 },
-                    { name: "Kam", revenue: 2800000 },
-                    { name: "Jum", revenue: 2500000 },
-                    { name: "Sab", revenue: 2100000 },
-                    { name: "Min", revenue: 1600000 },
-                  ]
-                : chartPeriod === "weekly"
-                ? [
-                    { name: "Minggu 1", revenue: 8500000 },
-                    { name: "Minggu 2", revenue: 10200000 },
-                    { name: "Minggu 3", revenue: 9300000 },
-                    { name: "Minggu 4", revenue: 11800000 },
-                  ]
-                : [
-                    { name: "Jan", revenue: 12000000 },
-                    { name: "Feb", revenue: 15000000 },
-                    { name: "Mar", revenue: 18000000 },
-                    { name: "Apr", revenue: 16000000 },
-                    { name: "Mei", revenue: 22000000 },
-                    { name: "Jun", revenue: 25000000 },
-                  ]
-            }
-          >
+          <LineChart data={revenueData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis
               dataKey="name"
@@ -380,73 +485,14 @@ const Reports = () => {
         <h3 className="text-lg font-semibold text-slate-800 mb-4">
           Booking Terbaru
         </h3>
-
-        {/* Desktop Table */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-slate-50 border-b border-slate-100">
-              <tr>
-                <th className="text-left px-4 py-3 text-sm font-semibold text-slate-600">
-                  Kode
-                </th>
-                <th className="text-left px-4 py-3 text-sm font-semibold text-slate-600">
-                  Pelanggan
-                </th>
-                <th className="text-left px-4 py-3 text-sm font-semibold text-slate-600">
-                  Layanan
-                </th>
-                <th className="text-left px-4 py-3 text-sm font-semibold text-slate-600">
-                  Tanggal
-                </th>
-                <th className="text-left px-4 py-3 text-sm font-semibold text-slate-600">
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {recentBookings.length > 0 ? (
-                recentBookings.slice(0, 5).map((booking) => (
-                  <tr key={booking.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 font-mono text-sm text-sky-600">
-                      {booking.kode_booking}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-slate-700">
-                      {booking.nama_pasien || booking.nama_user}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-slate-600">
-                      {booking.nama_layanan}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-slate-500">
-                      {formatDate(booking.tanggal)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge status={booking.status} size="sm" />
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan="5"
-                    className="px-4 py-8 text-center text-slate-500"
-                  >
-                    Belum ada data booking
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Mobile Card View */}
-        <div className="md:hidden space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
           {recentBookings.length > 0 ? (
-            recentBookings.slice(0, 5).map((booking) => (
+            recentBookings.slice(0, 6).map((booking) => (
               <div
                 key={booking.id}
-                className="border border-slate-200 rounded-lg p-3 hover:bg-slate-50"
+                className="border border-slate-200 rounded-xl p-3 sm:p-4 hover:bg-slate-50"
               >
-                <div className="flex items-start justify-between mb-2">
+                <div className="flex items-start justify-between gap-3 mb-3">
                   <div>
                     <p className="font-mono text-sm text-sky-600 font-semibold">
                       {booking.kode_booking}

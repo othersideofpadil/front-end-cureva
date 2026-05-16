@@ -19,7 +19,7 @@ const ServicesSection = ({
           className="text-center mb-12"
         >
           <h2 className="text-3xl sm:text-4xl font-bold text-slate-900">
-            Layanan <span className="text-sky-500">Kami</span>
+            Layanan <span className="text-primary">Kami</span>
           </h2>
           <p className="mt-4 text-lg text-slate-600 max-w-2xl mx-auto">
             Berbagai layanan fisioterapi profesional untuk memenuhi kebutuhan
@@ -42,34 +42,56 @@ const ServicesSection = ({
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: index * 0.05 }}
-                  className="bg-white p-6 rounded-2xl border border-slate-100 hover:border-sky-200 hover:shadow-xl transition-all group"
+                  className="bg-white rounded-2xl border border-slate-100 hover:border-sky-200 hover:shadow-xl transition-all group overflow-hidden"
                 >
-                  <div className="w-12 h-12 bg-gradient-to-br from-sky-100 to-indigo-100 rounded-xl flex items-center justify-center mb-4 group-hover:from-sky-400 group-hover:to-indigo-400 transition-all">
-                    <Heart className="w-6 h-6 text-sky-500 group-hover:text-white transition-colors" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-slate-900 mb-2 group-hover:text-sky-600 transition-colors">
-                    {item.nama}
-                  </h3>
-                  <p className="text-slate-600 text-sm mb-4 line-clamp-2">
-                    {item.deskripsi}
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sky-600 font-bold">
-                      {formatPrice(item.harga)}
-                    </span>
-                    <span className="text-slate-400 text-sm">
-                      {item.durasi} menit
-                    </span>
-                  </div>
-                  {isAuthenticated && (
-                    <Link
-                      to={`/bookings/new?layanan=${item.id}`}
-                      className="mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-sky-50 text-sky-600 font-medium rounded-lg hover:bg-sky-100 transition-colors text-sm"
+                  {/* Thumbnail */}
+                  <div className="w-full h-40 bg-slate-100 overflow-hidden">
+                    {item.gambar_url ? (
+                      <img
+                        src={item.gambar_url}
+                        alt={item.nama}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                        onError={(e) => {
+                          e.target.style.display = "none";
+                          e.target.nextSibling.style.display = "flex";
+                        }}
+                      />
+                    ) : null}
+                    <div
+                      className="w-full h-full items-center justify-center bg-slate-100"
+                      style={{ display: item.gambar_url ? "none" : "flex" }}
                     >
-                      Pesan Sekarang
-                      <ArrowRight className="w-4 h-4" />
-                    </Link>
-                  )}
+                      <Heart className="w-8 h-8 text-slate-300" />
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="p-6">
+                    <h3 className="text-lg font-semibold text-slate-900 mb-2 group-hover:text-primary transition-colors">
+                      {item.nama}
+                    </h3>
+                    <p className="text-slate-600 text-sm mb-4">
+                      {item.deskripsi}
+                    </p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-primary font-bold">
+                        {formatPrice(item.harga)}
+                      </span>
+                      <span className="text-slate-400 text-sm">
+                        {item.durasi} menit
+                      </span>
+                    </div>
+                    {isAuthenticated && (
+                      <Link
+                        to={`/bookings/new?layanan=${item.id}`}
+                        className="mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-sky-50 text-primary font-medium rounded-lg hover:bg-sky-100 transition-colors text-sm"
+                      >
+                        Pesan Sekarang
+                        <ArrowRight className="w-4 h-4" />
+                      </Link>
+                    )}
+                  </div>
                 </motion.div>
               ))}
           </div>

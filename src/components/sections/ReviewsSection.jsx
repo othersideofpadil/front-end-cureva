@@ -36,7 +36,7 @@ const ReviewsSection = ({
           className="text-center mb-12"
         >
           <h2 className="text-3xl sm:text-4xl font-bold text-slate-900">
-            Ulasan <span className="text-sky-500">Pasien Kami</span>
+            Ulasan <span className="text-primary">Pasien Kami</span>
           </h2>
           <p className="mt-4 text-lg text-slate-600 max-w-2xl mx-auto">
             Baca pengalaman dari pasien yang telah merasakan layanan fisioterapi
@@ -55,7 +55,7 @@ const ReviewsSection = ({
             >
               {/* Overall Rating */}
               <div className="text-center mb-6 pb-6 border-b border-slate-100">
-                <div className="text-5xl font-bold text-sky-500 mb-2">
+                <div className="text-5xl font-bold text-primary mb-2">
                   {averageRating}
                 </div>
                 <div className="flex justify-center gap-1 mb-2">
@@ -116,7 +116,7 @@ const ReviewsSection = ({
                         <select
                           value={selectedBooking}
                           onChange={(e) => setSelectedBooking(e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm"
+                          className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                           required
                         >
                           <option value="">-- Pilih Booking --</option>
@@ -167,7 +167,7 @@ const ReviewsSection = ({
                           value={reviewText}
                           onChange={(e) => setReviewText(e.target.value)}
                           placeholder="Bagikan pengalaman Anda dengan fisioterapis kami..."
-                          className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 resize-none text-sm"
+                          className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none text-sm"
                           rows="5"
                           maxLength="500"
                           required
@@ -183,7 +183,7 @@ const ReviewsSection = ({
                         disabled={
                           submitting || !userRating || !reviewText.trim()
                         }
-                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-sky-500 text-white font-semibold rounded-lg hover:bg-sky-600 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary/80 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
                       >
                         {submitting ? (
                           <>
@@ -218,7 +218,7 @@ const ReviewsSection = ({
                     </p>
                     <Link
                       to="/login"
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-sky-500 text-white font-medium rounded-lg hover:bg-sky-600 transition-colors text-sm"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-primary/80 transition-colors text-sm"
                     >
                       Masuk Sekarang
                     </Link>
@@ -247,7 +247,7 @@ const ReviewsSection = ({
                   <Quote className="absolute top-6 right-6 w-8 h-8 text-sky-500/10" />
 
                   <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-sky-400 to-indigo-500 flex items-center justify-center flex-shrink-0">
+                    <div className="w-12 h-12 rounded-full bg-linear-to-br from-primary to-secondary flex items-center justify-center shrink-0">
                       <span className="text-white font-semibold text-sm">
                         {rating.nama_pasien
                           .split(" ")

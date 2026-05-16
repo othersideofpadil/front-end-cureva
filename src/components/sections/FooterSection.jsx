@@ -8,55 +8,67 @@ import {
 } from "lucide-react";
 
 const FooterSection = ({ layanan }) => {
+  const year = new Date().getFullYear();
+
+  const navLinks = [
+    { label: "Fisioterapis", href: "#fisioterapis" },
+    { label: "Layanan", href: "#services" },
+    { label: "Ulasan", href: "#reviews" },
+  ];
+
+  const socials = [
+    { icon: Instagram, href: "#", label: "Instagram" },
+    { icon: Facebook, href: "#", label: "Facebook" },
+    { icon: Twitter, href: "#", label: "Twitter" },
+  ];
+
   return (
-    <footer
-      id="contact"
-      className="bg-slate-900 text-white py-12 px-4 sm:px-6 lg:px-8"
-    >
-      <div className="max-w-7xl mx-auto">
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          <div>
-            <div className="flex items-center gap-2 mb-4">
+    <footer id="contact" className="bg-slate-900 text-white">
+      {/* ── thin accent line ── */}
+      <div className="h-px bg-linear-to-r from-transparent via-sky-500/60 to-transparent" />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+        {/* ── Main grid ── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
+          {/* Brand — spans full width on mobile */}
+          <div className="col-span-2 lg:col-span-1">
+            <div className="flex items-center gap-2.5 mb-3">
               <img
                 src="/images/logo.png"
                 alt="Cureva"
-                className="w-10 h-10 rounded-xl"
+                className="w-8 h-8 rounded-lg object-cover"
               />
-              <span className="text-xl font-bold">Cureva</span>
+              <span className="text-lg font-bold tracking-tight">Cureva</span>
             </div>
-            <p className="text-slate-400 text-sm">
-              Layanan fisioterapi home visit profesional untuk kesehatan Anda.
+            <p className="text-slate-400 text-sm leading-relaxed mb-5">
+              Layanan homecare fisioterapi profesional untuk pemulihan dan kesehatan
+              gerak anda.
             </p>
-            <div className="flex gap-4 mt-4">
-              <a
-                href="#"
-                className="text-slate-400 hover:text-white transition-colors"
-              >
-                <Instagram className="w-5 h-5" />
-              </a>
-              <a
-                href="#"
-                className="text-slate-400 hover:text-white transition-colors"
-              >
-                <Facebook className="w-5 h-5" />
-              </a>
-              <a
-                href="#"
-                className="text-slate-400 hover:text-white transition-colors"
-              >
-                <Twitter className="w-5 h-5" />
-              </a>
+            <div className="flex gap-2.5">
+              {socials.map(({ icon: Icon, href, label }) => (
+                <a
+                  key={label}
+                  href={href}
+                  aria-label={label}
+                  className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white hover:bg-sky-500 transition-all"
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                </a>
+              ))}
             </div>
           </div>
 
+          {/* Layanan */}
           <div>
-            <h4 className="font-semibold mb-4">Layanan</h4>
-            <ul className="space-y-2 text-slate-400 text-sm">
-              {layanan.slice(0, 4).map((item) => (
+            <h4 className="text-xs font-semibold tracking-widest uppercase text-slate-500 mb-4">
+              Layanan
+            </h4>
+            <ul className="space-y-2.5">
+              {(layanan || []).slice(0, 5).map((item) => (
                 <li key={item.id}>
                   <a
                     href="#services"
-                    className="hover:text-white transition-colors"
+                    className="text-sm text-slate-400 hover:text-white transition-colors"
                   >
                     {item.nama}
                   </a>
@@ -65,57 +77,55 @@ const FooterSection = ({ layanan }) => {
             </ul>
           </div>
 
+          {/* Menu */}
           <div>
-            <h4 className="font-semibold mb-4">Menu</h4>
-            <ul className="space-y-2 text-slate-400 text-sm">
-              <li>
-                <a
-                  href="#fisioterapis"
-                  className="hover:text-white transition-colors"
-                >
-                  Fisioterapis
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#features"
-                  className="hover:text-white transition-colors"
-                >
-                  Fitur
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#services"
-                  className="hover:text-white transition-colors"
-                >
-                  Layanan
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#reviews"
-                  className="hover:text-white transition-colors"
-                >
-                  Ulasan
-                </a>
-              </li>
+            <h4 className="text-xs font-semibold tracking-widest uppercase text-slate-500 mb-4">
+              Menu
+            </h4>
+            <ul className="space-y-2.5">
+              {navLinks.map(({ label, href }) => (
+                <li key={label}>
+                  <a
+                    href={href}
+                    className="text-sm text-slate-400 hover:text-white transition-colors"
+                  >
+                    {label}
+                  </a>
+                </li>
+              ))}
             </ul>
           </div>
 
-          <div>
-            <h4 className="font-semibold mb-4">Kontak</h4>
-            <ul className="space-y-2 text-slate-400 text-sm">
-              <li className="flex items-center gap-2">
-                <Phone className="w-4 h-4" />
-                +62 812-3456-7890
-              </li>
-              <li className="flex items-center gap-2">
-                <Mail className="w-4 h-4" />
-                hello@cureva.id
-              </li>
-              <li className="flex items-start gap-2">
-                <MapPin className="w-4 h-4 mt-0.5" />
+          {/* Kontak */}
+          <div className="col-span-2 lg:col-span-1">
+            <h4 className="text-xs font-semibold tracking-widest uppercase text-slate-500 mb-4">
+              Kontak
+            </h4>
+            <ul className="space-y-3">
+              {[
+                {
+                  icon: Phone,
+                  text: "+62 812-3456-7890",
+                  href: "tel:+6281234567890",
+                },
+                {
+                  icon: Mail,
+                  text: "hello@cureva.id",
+                  href: "mailto:hello@cureva.id",
+                },
+              ].map(({ icon: Icon, text, href }) => (
+                <li key={text}>
+                  <a
+                    href={href}
+                    className="flex items-center gap-2.5 text-sm text-slate-400 hover:text-white transition-colors group"
+                  >
+                    <Icon className="w-3.5 h-3.5 shrink-0 text-sky-500 group-hover:text-sky-400" />
+                    {text}
+                  </a>
+                </li>
+              ))}
+              <li className="flex items-start gap-2.5 text-sm text-slate-400">
+                <MapPin className="w-3.5 h-3.5 shrink-0 text-sky-500 mt-0.5" />
                 <span>
                   Jl. Kesehatan No. 123
                   <br />
@@ -126,8 +136,10 @@ const FooterSection = ({ layanan }) => {
           </div>
         </div>
 
-        <div className="mt-10 pt-8 border-t border-slate-800 text-center text-slate-400 text-sm">
-          <p>© {new Date().getFullYear()} Cureva. All rights reserved.</p>
+        {/* ── Bottom bar ── */}
+        <div className="mt-12 pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
+          <p>© {year} Cureva. All rights reserved.</p>
+          <p>Layanan homecare fisioterapi terpercaya di Indonesia</p>
         </div>
       </div>
     </footer>

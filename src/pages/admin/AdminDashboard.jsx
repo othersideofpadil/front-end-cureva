@@ -5,8 +5,6 @@ import {
   Calendar,
   CreditCard,
   TrendingUp,
-  ArrowUp,
-  ArrowDown,
   Clock,
   CheckCircle,
   XCircle,
@@ -24,14 +22,14 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { adminService } from "../../services";
+import { adminService, bookingService } from "../../services";
 import { Card, LoadingSpinner, Badge } from "../../components/common";
 
 const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [chartPeriod, setChartPeriod] = useState("weekly");
   const [windowWidth, setWindowWidth] = useState(
-    typeof window !== "undefined" ? window.innerWidth : 1024
+    typeof window !== "undefined" ? window.innerWidth : 1024,
   );
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -41,9 +39,11 @@ const AdminDashboard = () => {
     totalRevenue: 0,
     todayBookings: 0,
     totalLayanan: 0,
+    monthStats: {},
     recentBookings: [],
     upcomingBookings: [],
   });
+  const [chartData, setChartData] = useState([]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -56,6 +56,11 @@ const AdminDashboard = () => {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  useEffect(() => {
+    // Refetch chart data when period changes
+    fetchChartData(chartPeriod).catch((e) => console.error(e));
+  }, [chartPeriod]);
 
   const fetchDashboardData = async () => {
     try {
@@ -72,13 +77,123 @@ const AdminDashboard = () => {
         avgRating: data.overview?.rata_rating || 0,
         todayBookings: data.overview?.booking_hari_ini || 0,
         totalLayanan: data.overview?.total_layanan || 0,
+        monthStats: data.month_stats || {},
         recentBookings: data.recent_bookings || [],
         upcomingBookings: data.upcoming_bookings || [],
       });
+      // Fetch chart data after stats
+      fetchChartData(chartPeriod).catch((e) => console.error(e));
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchChartData = async (period = "weekly") => {
+    try {
+      const today = new Date();
+
+      const pad = (n) => String(n).padStart(2, "0");
+      const toYMD = (d) =>
+        `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+      if (period === "daily") {
+        const days = 7;
+        const from = new Date();
+        from.setDate(today.getDate() - (days - 1));
+        const tanggalFrom = toYMD(from);
+        const tanggalTo = toYMD(today);
+
+        const res = await bookingService.getAll({
+          tanggalFrom,
+          tanggalTo,
+          limit: 10000,
+        });
+        const bookings = res.data || [];
+
+        const data = [];
+        for (let i = 0; i < days; i++) {
+          const d = new Date(from);
+          d.setDate(from.getDate() + i);
+          const key = toYMD(d);
+          const label = d.toLocaleDateString("id-ID", { weekday: "short" });
+          const count = bookings.filter((b) => b.tanggal === key).length;
+          data.push({ name: label, bookings: count });
+        }
+        setChartData(data);
+        return;
+      }
+
+      if (period === "weekly") {
+        const weeks = 4;
+        const totalDays = weeks * 7;
+        const from = new Date();
+        from.setDate(today.getDate() - (totalDays - 1));
+        const tanggalFrom = toYMD(from);
+        const tanggalTo = toYMD(today);
+
+        const res = await bookingService.getAll({
+          tanggalFrom,
+          tanggalTo,
+          limit: 10000,
+        });
+        const bookings = res.data || [];
+
+        const data = [];
+        for (let w = 0; w < weeks; w++) {
+          const weekStart = new Date(from);
+          weekStart.setDate(from.getDate() + w * 7);
+          const weekEnd = new Date(weekStart);
+          weekEnd.setDate(weekStart.getDate() + 6);
+          const count = bookings.filter((b) => {
+            const t = b.tanggal;
+            return t >= toYMD(weekStart) && t <= toYMD(weekEnd);
+          }).length;
+          data.push({ name: `Minggu ${w + 1}`, bookings: count });
+        }
+        setChartData(data);
+        return;
+      }
+
+      // monthly
+      const months = 6;
+      const data = [];
+      const start = new Date(
+        today.getFullYear(),
+        today.getMonth() - (months - 1),
+        1,
+      );
+      const tanggalFrom = toYMD(start);
+      const tanggalTo = toYMD(
+        new Date(today.getFullYear(), today.getMonth() + 1, 0),
+      );
+
+      const res = await bookingService.getAll({
+        tanggalFrom,
+        tanggalTo,
+        limit: 10000,
+      });
+      const bookings = res.data || [];
+
+      for (let m = 0; m < months; m++) {
+        const cur = new Date(start.getFullYear(), start.getMonth() + m, 1);
+        const monthStart = toYMD(
+          new Date(cur.getFullYear(), cur.getMonth(), 1),
+        );
+        const monthEnd = toYMD(
+          new Date(cur.getFullYear(), cur.getMonth() + 1, 0),
+        );
+        const count = bookings.filter(
+          (b) => b.tanggal >= monthStart && b.tanggal <= monthEnd,
+        ).length;
+        const label = cur.toLocaleDateString("id-ID", { month: "short" });
+        data.push({ name: label, bookings: count });
+      }
+      setChartData(data);
+    } catch (error) {
+      console.error("Failed to fetch chart data:", error);
+      setChartData([]);
     }
   };
 
@@ -109,8 +224,8 @@ const AdminDashboard = () => {
       icon: Users,
       color: "bg-sky-500",
       lightColor: "bg-sky-50",
-      trend: "+12%",
-      trendUp: true,
+      caption: `Total layanan: ${stats.totalLayanan || 0}`,
+      href: "/admin/users",
     },
     {
       title: "Total Booking",
@@ -118,8 +233,8 @@ const AdminDashboard = () => {
       icon: Calendar,
       color: "bg-indigo-500",
       lightColor: "bg-indigo-50",
-      trend: "+8%",
-      trendUp: true,
+      caption: `Bulan ini: ${stats.monthStats?.total_pemesanan || 0}`,
+      href: "/admin/bookings",
     },
     {
       title: "Menunggu Konfirmasi",
@@ -127,8 +242,8 @@ const AdminDashboard = () => {
       icon: Clock,
       color: "bg-amber-500",
       lightColor: "bg-amber-50",
-      trend: "-5%",
-      trendUp: false,
+      caption: `Bulan ini: ${stats.monthStats?.menunggu || 0}`,
+      href: "/admin/bookings",
     },
     {
       title: "Total Pendapatan",
@@ -136,8 +251,10 @@ const AdminDashboard = () => {
       icon: CreditCard,
       color: "bg-emerald-500",
       lightColor: "bg-emerald-50",
-      trend: "+15%",
-      trendUp: true,
+      caption: `Bulan ini: ${formatCurrency(
+        stats.monthStats?.total_dibayar || 0,
+      )}`,
+      href: "/admin/payments",
     },
   ];
 
@@ -174,22 +291,16 @@ const AdminDashboard = () => {
                     <Icon
                       className={`w-5 h-5 sm:w-6 sm:h-6 ${stat.color.replace(
                         "bg-",
-                        "text-"
+                        "text-",
                       )}`}
                     />
                   </div>
-                  <div
-                    className={`flex items-center gap-1 text-xs sm:text-sm font-medium ${
-                      stat.trendUp ? "text-emerald-600" : "text-red-600"
-                    }`}
+                  <a
+                    href={stat.href}
+                    className="text-xs sm:text-sm font-medium text-sky-600 hover:text-sky-700"
                   >
-                    {stat.trendUp ? (
-                      <ArrowUp className="w-3 h-3 sm:w-4 sm:h-4" />
-                    ) : (
-                      <ArrowDown className="w-3 h-3 sm:w-4 sm:h-4" />
-                    )}
-                    {stat.trend}
-                  </div>
+                    Lihat
+                  </a>
                 </div>
                 <div className="mt-4">
                   <p className="text-xl sm:text-2xl font-bold text-slate-800">
@@ -198,6 +309,11 @@ const AdminDashboard = () => {
                   <p className="text-xs sm:text-sm text-slate-500">
                     {stat.title}
                   </p>
+                  {stat.caption && (
+                    <p className="text-xs sm:text-sm text-slate-400 mt-1">
+                      {stat.caption}
+                    </p>
+                  )}
                 </div>
               </Card>
             </motion.div>
@@ -207,40 +323,68 @@ const AdminDashboard = () => {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-        <Card className="flex items-center gap-3 sm:gap-4">
-          <div className="p-2 sm:p-3 bg-sky-100 rounded-xl shrink-0">
-            <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-sky-500" />
+        <Card className="flex items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="p-2 sm:p-3 bg-sky-100 rounded-xl shrink-0">
+              <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-sky-500" />
+            </div>
+            <div>
+              <p className="text-xl sm:text-2xl font-bold text-slate-800">
+                {stats.todayBookings || 0}
+              </p>
+              <p className="text-xs sm:text-sm text-slate-500">
+                Booking Hari Ini
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-xl sm:text-2xl font-bold text-slate-800">
-              {stats.todayBookings || 0}
-            </p>
-            <p className="text-xs sm:text-sm text-slate-500">
-              Booking Hari Ini
-            </p>
-          </div>
+          <a
+            href="/admin/bookings"
+            className="text-xs sm:text-sm font-medium text-sky-600 hover:text-sky-700"
+          >
+            Lihat
+          </a>
         </Card>
-        <Card className="flex items-center gap-3 sm:gap-4">
-          <div className="p-2 sm:p-3 bg-emerald-100 rounded-xl shrink-0">
-            <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-500" />
+        <Card className="flex items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="p-2 sm:p-3 bg-emerald-100 rounded-xl shrink-0">
+              <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-500" />
+            </div>
+            <div>
+              <p className="text-xl sm:text-2xl font-bold text-slate-800">
+                {stats.completedBookings || 0}
+              </p>
+              <p className="text-xs sm:text-sm text-slate-500">
+                Booking Selesai
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-xl sm:text-2xl font-bold text-slate-800">
-              {stats.completedBookings || 0}
-            </p>
-            <p className="text-xs sm:text-sm text-slate-500">Booking Selesai</p>
-          </div>
+          <a
+            href="/admin/bookings"
+            className="text-xs sm:text-sm font-medium text-sky-600 hover:text-sky-700"
+          >
+            Lihat
+          </a>
         </Card>
-        <Card className="flex items-center gap-3 sm:gap-4">
-          <div className="p-2 sm:p-3 bg-amber-100 rounded-xl shrink-0">
-            <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500" />
+        <Card className="flex items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="p-2 sm:p-3 bg-amber-100 rounded-xl shrink-0">
+              <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500" />
+            </div>
+            <div>
+              <p className="text-xl sm:text-2xl font-bold text-slate-800">
+                {stats.pendingBookings || 0}
+              </p>
+              <p className="text-xs sm:text-sm text-slate-500">
+                Perlu Tindakan
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-xl sm:text-2xl font-bold text-slate-800">
-              {stats.pendingBookings || 0}
-            </p>
-            <p className="text-xs sm:text-sm text-slate-500">Perlu Tindakan</p>
-          </div>
+          <a
+            href="/admin/bookings"
+            className="text-xs sm:text-sm font-medium text-sky-600 hover:text-sky-700"
+          >
+            Lihat
+          </a>
         </Card>
       </div>
 
@@ -260,69 +404,47 @@ const AdminDashboard = () => {
             </select>
           </div>
         </div>
-        <ResponsiveContainer
-          width="100%"
-          height={windowWidth < 640 ? 250 : 300}
-        >
-          <AreaChart
-            data={
-              chartPeriod === "daily"
-                ? [
-                    { name: "Sen", bookings: 12 },
-                    { name: "Sel", bookings: 19 },
-                    { name: "Rab", bookings: 15 },
-                    { name: "Kam", bookings: 25 },
-                    { name: "Jum", bookings: 22 },
-                    { name: "Sab", bookings: 18 },
-                    { name: "Min", bookings: 14 },
-                  ]
-                : chartPeriod === "weekly"
-                ? [
-                    { name: "Minggu 1", bookings: 45 },
-                    { name: "Minggu 2", bookings: 52 },
-                    { name: "Minggu 3", bookings: 48 },
-                    { name: "Minggu 4", bookings: 61 },
-                  ]
-                : [
-                    { name: "Jan", bookings: 180 },
-                    { name: "Feb", bookings: 220 },
-                    { name: "Mar", bookings: 195 },
-                    { name: "Apr", bookings: 240 },
-                    { name: "Mei", bookings: 265 },
-                    { name: "Jun", bookings: 290 },
-                  ]
-            }
+        {chartData.length === 0 ? (
+          <div className="flex items-center justify-center py-12 text-slate-500">
+            Tidak ada data untuk periode ini
+          </div>
+        ) : (
+          <ResponsiveContainer
+            width="100%"
+            height={windowWidth < 640 ? 250 : 300}
           >
-            <defs>
-              <linearGradient id="colorBookings" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-            <XAxis
-              dataKey="name"
-              stroke="#64748b"
-              fontSize={12}
-              tickLine={false}
-            />
-            <YAxis stroke="#64748b" fontSize={12} tickLine={false} />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "#fff",
-                border: "1px solid #e2e8f0",
-                borderRadius: "0.5rem",
-              }}
-            />
-            <Area
-              type="monotone"
-              dataKey="bookings"
-              stroke="#0ea5e9"
-              fillOpacity={1}
-              fill="url(#colorBookings)"
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+            <AreaChart data={chartData}>
+              <defs>
+                <linearGradient id="colorBookings" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis
+                dataKey="name"
+                stroke="#64748b"
+                fontSize={12}
+                tickLine={false}
+              />
+              <YAxis stroke="#64748b" fontSize={12} tickLine={false} />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "#fff",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "0.5rem",
+                }}
+              />
+              <Area
+                type="monotone"
+                dataKey="bookings"
+                stroke="#0ea5e9"
+                fillOpacity={1}
+                fill="url(#colorBookings)"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        )}
       </Card>
 
       {/* Recent Bookings */}
@@ -339,102 +461,59 @@ const AdminDashboard = () => {
           </a>
         </div>
 
-        {/* Desktop Table */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-slate-50 border-b border-slate-100">
-              <tr>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-slate-600">
-                  Kode
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-slate-600">
-                  Pasien
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-slate-600">
-                  Layanan
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-slate-600">
-                  Jadwal
-                </th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-slate-600">
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {stats.recentBookings.map((booking) => (
-                <tr key={booking.id} className="hover:bg-slate-50">
-                  <td className="py-3 px-4 font-mono text-sm text-sky-600">
-                    {booking.kode_booking}
-                  </td>
-                  <td className="py-3 px-4 text-sm text-slate-800">
-                    {booking.nama_pasien}
-                  </td>
-                  <td className="py-3 px-4 text-sm text-slate-600">
-                    {booking.nama_layanan}
-                  </td>
-                  <td className="py-3 px-4 text-sm text-slate-600">
-                    <div>
-                      <p className="font-medium text-slate-800">
-                        {formatDate(booking.tanggal)}
-                      </p>
-                      <p className="text-slate-500">
-                        {formatTime(booking.waktu)} WIB
-                      </p>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4">
-                    <Badge status={booking.status} size="sm" />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Mobile Card View */}
-        <div className="md:hidden space-y-3">
-          {stats.recentBookings.map((booking) => (
-            <div
-              key={booking.id}
-              className="border border-slate-200 rounded-lg p-3 hover:bg-slate-50"
-            >
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <p className="font-mono text-sm text-sky-600 font-semibold">
-                    {booking.kode_booking}
-                  </p>
-                  <p className="text-sm text-slate-700 mt-0.5">
-                    {booking.nama_pasien}
-                  </p>
-                </div>
-                <Badge status={booking.status} size="sm" />
-              </div>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Layanan:</span>
-                  <span className="text-slate-700 font-medium">
-                    {booking.nama_layanan}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Jadwal:</span>
-                  <div className="text-right">
-                    <p className="text-slate-800 font-medium">
-                      {formatDate(booking.tanggal)}
-                    </p>
-                    <p className="text-slate-600 text-xs">
-                      {formatTime(booking.waktu)} WIB
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-          {stats.recentBookings.length === 0 && (
-            <div className="text-center py-8 text-slate-500">
+        {/* Bookings Grid (responsive cards for all viewports) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+          {stats.recentBookings.length === 0 ? (
+            <div className="col-span-full text-center py-8 text-slate-500">
               Belum ada booking
             </div>
+          ) : (
+            stats.recentBookings.map((booking) => (
+              <Card
+                key={booking.id}
+                className="p-3 sm:p-4 hover:bg-slate-50 h-full rounded-lg shadow-sm"
+              >
+                <div className="flex flex-col justify-between h-full">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="min-w-0">
+                      <p className="font-mono text-xs sm:text-sm text-sky-600 font-semibold truncate">
+                        {booking.kode_booking}
+                      </p>
+                      <p className="text-sm sm:text-base text-slate-700 mt-0.5 truncate">
+                        {booking.nama_pasien}
+                      </p>
+                    </div>
+                    <div className="ml-3 shrink-0">
+                      <Badge status={booking.status} size="sm" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 text-xs sm:text-sm">
+                    <div className="flex justify-between items-start">
+                      <span className="text-slate-500 text-xs sm:text-sm">
+                        Layanan:
+                      </span>
+                      <span className="text-slate-700 font-medium text-sm sm:text-sm truncate ml-3 text-right">
+                        {booking.nama_layanan}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-start">
+                      <span className="text-slate-500 text-xs sm:text-sm">
+                        Jadwal:
+                      </span>
+                      <div className="text-right ml-3">
+                        <p className="text-slate-800 font-medium text-sm sm:text-sm">
+                          {formatDate(booking.tanggal)}
+                        </p>
+                        <p className="text-slate-600 text-xs sm:text-sm">
+                          {formatTime(booking.waktu)} WIB
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))
           )}
         </div>
       </Card>

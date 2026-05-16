@@ -27,9 +27,7 @@ const Navbar = ({ isLandingPage = false, unreadCountProp = null }) => {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 10);
-    };
+    const handleScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -41,23 +39,15 @@ const Navbar = ({ isLandingPage = false, unreadCountProp = null }) => {
   }, [isAuthenticated, isLandingPage]);
 
   useEffect(() => {
-    if (unreadCountProp !== null) {
-      setUnreadCount(unreadCountProp);
-    }
+    if (unreadCountProp !== null) setUnreadCount(unreadCountProp);
   }, [unreadCountProp]);
 
-  // Listen for notification updates from other components
   useEffect(() => {
     const handleNotificationUpdate = () => {
-      if (isAuthenticated) {
-        fetchUnreadCount();
-      }
+      if (isAuthenticated) fetchUnreadCount();
     };
-
     const handleRealtimeNotification = () => {
-      if (isAuthenticated) {
-        fetchUnreadCount();
-      }
+      if (isAuthenticated) fetchUnreadCount();
     };
 
     window.addEventListener("notificationUpdate", handleNotificationUpdate);
@@ -88,10 +78,10 @@ const Navbar = ({ isLandingPage = false, unreadCountProp = null }) => {
     navigate("/login");
   };
 
-  // Check if user is admin
   const isAdmin = user?.role === "admin";
 
-  // Bedakan navigasi untuk admin dan user
+  // Nav links tampil di desktop
+  // User biasa: Layanan & Jadwal dihapus (sudah ada di landing page)
   const navLinks = isAdmin
     ? [
         { path: "/admin", label: "Dashboard", icon: Home },
@@ -101,10 +91,14 @@ const Navbar = ({ isLandingPage = false, unreadCountProp = null }) => {
       ]
     : [
         { path: "/bookings", label: "Booking Saya", icon: Calendar },
-        { path: "/layanan", label: "Layanan", icon: FileText },
-        { path: "/jadwal", label: "Jadwal", icon: Clock },
         { path: "/ratings", label: "Ulasan", icon: Star },
       ];
+
+  // Link yang juga muncul di dropdown user biasa (untuk akses dari semua halaman)
+  const userDropdownLinks = [
+    { path: "/bookings", label: "Booking Saya", icon: Calendar },
+    { path: "/ratings", label: "Ulasan", icon: Star },
+  ];
 
   return (
     <nav
@@ -119,7 +113,7 @@ const Navbar = ({ isLandingPage = false, unreadCountProp = null }) => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2 shrink-0">
             <img
               src="/images/logo.png"
               alt="Cureva"
@@ -128,7 +122,7 @@ const Navbar = ({ isLandingPage = false, unreadCountProp = null }) => {
             <span
               className={`text-xl font-bold ${
                 isLandingPage
-                  ? "bg-linear-to-r from-sky-500 to-indigo-500 bg-clip-text text-transparent"
+                  ? "bg-linear-to-r text-primary-dark bg-clip-text"
                   : "text-slate-800"
               }`}
             >
@@ -139,27 +133,29 @@ const Navbar = ({ isLandingPage = false, unreadCountProp = null }) => {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-1">
             {isLandingPage ? (
+              // Landing page: anchor links
               <>
                 <a
                   href="#fisioterapis"
-                  className="px-4 py-2 text-slate-600 hover:text-slate-900 transition-colors"
+                  className="px-4 py-2 text-slate-600 hover:text-slate-900 transition-colors rounded-lg hover:bg-slate-50"
                 >
                   Fisioterapis
                 </a>
                 <a
                   href="#services"
-                  className="px-4 py-2 text-slate-600 hover:text-slate-900 transition-colors"
+                  className="px-4 py-2 text-slate-600 hover:text-slate-900 transition-colors rounded-lg hover:bg-slate-50"
                 >
                   Layanan
                 </a>
                 <a
                   href="#reviews"
-                  className="px-4 py-2 text-slate-600 hover:text-slate-900 transition-colors"
+                  className="px-4 py-2 text-slate-600 hover:text-slate-900 transition-colors rounded-lg hover:bg-slate-50"
                 >
                   Ulasan
                 </a>
               </>
             ) : (
+              // App pages: nav links tampil langsung di desktop
               navLinks.map((link) => {
                 const Icon = link.icon;
                 const isActive = location.pathname === link.path;
@@ -182,10 +178,25 @@ const Navbar = ({ isLandingPage = false, unreadCountProp = null }) => {
           </div>
 
           {/* Right Side */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {isAuthenticated ? (
               <>
-                {/* User Menu */}
+                {/* Notifikasi Bell — tampil di semua halaman, desktop, non-admin */}
+                {!isAdmin && (
+                  <Link
+                    to="/notifications"
+                    className="relative hidden md:flex items-center justify-center w-9 h-9 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                  >
+                    <Bell className="w-5 h-5" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    )}
+                  </Link>
+                )}
+
+                {/* User Dropdown — hanya Profil + Keluar */}
                 <div className="relative">
                   <button
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
@@ -200,7 +211,7 @@ const Navbar = ({ isLandingPage = false, unreadCountProp = null }) => {
                         isLandingPage
                           ? "bg-linear-to-br from-sky-400 to-indigo-500"
                           : "bg-linear-to-br from-sky-400 to-indigo-400"
-                      } rounded-full flex items-center justify-center text-white font-semibold text-sm`}
+                      } rounded-full flex items-center justify-center text-white font-semibold text-sm shrink-0`}
                     >
                       {user?.nama?.charAt(0).toUpperCase() || "U"}
                     </div>
@@ -216,15 +227,10 @@ const Navbar = ({ isLandingPage = false, unreadCountProp = null }) => {
                     <ChevronDown
                       className={`w-4 h-4 ${
                         isLandingPage ? "text-slate-500" : "text-slate-400"
-                      } transition-transform ${
+                      } transition-transform duration-200 ${
                         userMenuOpen ? "rotate-180" : ""
                       }`}
                     />
-                    {unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                        {unreadCount > 9 ? "9+" : unreadCount}
-                      </span>
-                    )}
                   </button>
 
                   <AnimatePresence>
@@ -239,134 +245,78 @@ const Navbar = ({ isLandingPage = false, unreadCountProp = null }) => {
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: 10, scale: 0.95 }}
                           transition={{ duration: 0.15 }}
-                          className={`absolute right-0 mt-2 w-56 bg-white rounded-xl border border-slate-100 py-2 z-20 ${
+                          className={`absolute right-0 mt-2 w-52 bg-white rounded-xl border border-slate-100 py-2 z-20 ${
                             isLandingPage ? "shadow-xl" : "shadow-lg"
                           }`}
                         >
+                          {/* Info user */}
                           <div className="px-4 py-3 border-b border-slate-100">
-                            <p className="font-semibold text-slate-800 truncate">
+                            <p className="font-semibold text-slate-800 truncate text-sm">
                               {user?.nama}
                             </p>
-                            <p className="text-sm text-slate-500 truncate">
+                            <p className="text-xs text-slate-500 truncate mt-0.5">
                               {user?.email}
                             </p>
                           </div>
 
-                          {/* Menu Items - berbeda untuk admin dan user */}
-                          <div className={isLandingPage ? "py-2" : "py-1"}>
-                            {isAdmin ? (
+                          {/* Menu items */}
+                          <div className="py-1">
+                            {/* User biasa: Booking Saya + Ulasan + Notifikasi + Profil */}
+                            {!isAdmin && (
                               <>
-                                <Link
-                                  to="/admin"
-                                  onClick={() => setUserMenuOpen(false)}
-                                  className="flex items-center gap-3 px-4 py-2.5 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-                                >
-                                  <Home className="w-4 h-4" />
-                                  Dashboard
-                                </Link>
-                                <Link
-                                  to="/admin/bookings"
-                                  onClick={() => setUserMenuOpen(false)}
-                                  className="flex items-center gap-3 px-4 py-2.5 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-                                >
-                                  <Calendar className="w-4 h-4" />
-                                  Kelola Booking
-                                </Link>
-                                <Link
-                                  to="/admin/layanan"
-                                  onClick={() => setUserMenuOpen(false)}
-                                  className="flex items-center gap-3 px-4 py-2.5 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-                                >
-                                  <FileText className="w-4 h-4" />
-                                  Kelola Layanan
-                                </Link>
-                                <Link
-                                  to="/admin/jadwal"
-                                  onClick={() => setUserMenuOpen(false)}
-                                  className="flex items-center gap-3 px-4 py-2.5 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-                                >
-                                  <Clock className="w-4 h-4" />
-                                  Kelola Jadwal
-                                </Link>
-                                <Link
-                                  to="/profile"
-                                  onClick={() => setUserMenuOpen(false)}
-                                  className="flex items-center gap-3 px-4 py-2.5 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-                                >
-                                  <User className="w-4 h-4" />
-                                  Profil Saya
-                                </Link>
-                              </>
-                            ) : (
-                              <>
-                                <Link
-                                  to="/bookings"
-                                  onClick={() => setUserMenuOpen(false)}
-                                  className="flex items-center gap-3 px-4 py-2.5 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-                                >
-                                  <Calendar className="w-4 h-4" />
-                                  Booking Saya
-                                </Link>
-                                <Link
-                                  to="/layanan"
-                                  onClick={() => setUserMenuOpen(false)}
-                                  className="flex items-center gap-3 px-4 py-2.5 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-                                >
-                                  <FileText className="w-4 h-4" />
-                                  Layanan
-                                </Link>
-                                <Link
-                                  to="/jadwal"
-                                  onClick={() => setUserMenuOpen(false)}
-                                  className="flex items-center gap-3 px-4 py-2.5 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-                                >
-                                  <Clock className="w-4 h-4" />
-                                  Jadwal
-                                </Link>
-                                <Link
-                                  to="/ratings"
-                                  onClick={() => setUserMenuOpen(false)}
-                                  className="flex items-center gap-3 px-4 py-2.5 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-                                >
-                                  <Star className="w-4 h-4" />
-                                  Ulasan
-                                </Link>
-                                <Link
-                                  to="/notifications"
-                                  onClick={() => setUserMenuOpen(false)}
-                                  className="flex items-center justify-between px-4 py-2.5 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-                                >
-                                  <div className="flex items-center gap-3">
-                                    <Bell className="w-4 h-4" />
-                                    Notifikasi
-                                  </div>
-                                  {unreadCount > 0 && (
-                                    <span className="px-2 py-0.5 bg-red-100 text-red-600 text-xs font-medium rounded-full">
-                                      {unreadCount}
-                                    </span>
-                                  )}
-                                </Link>
-                                <Link
-                                  to="/profile"
-                                  onClick={() => setUserMenuOpen(false)}
-                                  className="flex items-center gap-3 px-4 py-2.5 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-                                >
-                                  <User className="w-4 h-4" />
-                                  Profil Saya
-                                </Link>
+                                {userDropdownLinks.map((link) => {
+                                  const Icon = link.icon;
+                                  return (
+                                    <Link
+                                      key={link.path}
+                                      to={link.path}
+                                      onClick={() => setUserMenuOpen(false)}
+                                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                                    >
+                                      <Icon className="w-4 h-4" />
+                                      {link.label}
+                                    </Link>
+                                  );
+                                })}
                               </>
                             )}
+
+                            {/* Admin: link-link admin */}
+                            {isAdmin && (
+                              <>
+                                {navLinks.map((link) => {
+                                  const Icon = link.icon;
+                                  return (
+                                    <Link
+                                      key={link.path}
+                                      to={link.path}
+                                      onClick={() => setUserMenuOpen(false)}
+                                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                                    >
+                                      <Icon className="w-4 h-4" />
+                                      {link.label}
+                                    </Link>
+                                  );
+                                })}
+                              </>
+                            )}
+
+                            {/* Profil Saya — selalu ada */}
+                            <Link
+                              to="/profile"
+                              onClick={() => setUserMenuOpen(false)}
+                              className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                            >
+                              <User className="w-4 h-4" />
+                              Profil Saya
+                            </Link>
                           </div>
 
-                          <div
-                            className={`${isLandingPage ? "border-t border-slate-100 pt-2" : ""}`}
-                          >
-                            {!isLandingPage && (
-                              <hr className="my-2 border-slate-100" />
-                            )}
+                          {/* Logout */}
+                          <div className="border-t border-slate-100 pt-1">
                             <button
                               onClick={handleLogout}
-                              className="flex items-center gap-3 px-4 py-2.5 text-red-600 hover:bg-red-50 w-full transition-colors"
+                              className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 w-full transition-colors"
                             >
                               <LogOut className="w-4 h-4" />
                               <span>Keluar</span>
@@ -379,7 +329,16 @@ const Navbar = ({ isLandingPage = false, unreadCountProp = null }) => {
                 </div>
               </>
             ) : (
+              // Belum login
               <div className="flex items-center gap-2">
+                {/* Bell icon untuk yang belum login — redirect ke login */}
+                <button
+                  onClick={() => navigate("/login?redirect=%2Fnotifications")}
+                  className="relative hidden md:flex items-center justify-center w-9 h-9 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                  title="Login untuk melihat notifikasi"
+                >
+                  <Bell className="w-5 h-5" />
+                </button>
                 <Link
                   to="/login"
                   className={`${
@@ -401,7 +360,7 @@ const Navbar = ({ isLandingPage = false, unreadCountProp = null }) => {
               </div>
             )}
 
-            {/* Mobile Menu Button */}
+            {/* Mobile Menu Toggle */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="md:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100"
@@ -423,7 +382,7 @@ const Navbar = ({ isLandingPage = false, unreadCountProp = null }) => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden bg-white border-t border-slate-100"
+            className="md:hidden bg-white border-t border-slate-100 overflow-hidden"
           >
             <div className="px-4 py-4 space-y-1">
               {isLandingPage ? (
@@ -431,21 +390,21 @@ const Navbar = ({ isLandingPage = false, unreadCountProp = null }) => {
                   <a
                     href="#fisioterapis"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="block px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-lg"
+                    className="block px-4 py-2.5 text-slate-600 hover:bg-slate-50 rounded-lg"
                   >
-                    Fisioterapis & Jadwal
+                    Fisioterapis
                   </a>
                   <a
                     href="#services"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="block px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-lg"
+                    className="block px-4 py-2.5 text-slate-600 hover:bg-slate-50 rounded-lg"
                   >
                     Layanan
                   </a>
                   <a
                     href="#reviews"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="block px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-lg"
+                    className="block px-4 py-2.5 text-slate-600 hover:bg-slate-50 rounded-lg"
                   >
                     Ulasan
                   </a>
@@ -453,32 +412,54 @@ const Navbar = ({ isLandingPage = false, unreadCountProp = null }) => {
                     <Link
                       to="/login"
                       onClick={() => setMobileMenuOpen(false)}
-                      className="block px-4 py-2 text-slate-600 hover:bg-slate-50 rounded-lg"
+                      className="block px-4 py-2.5 text-slate-600 hover:bg-slate-50 rounded-lg"
                     >
                       Masuk
                     </Link>
                   )}
                 </>
               ) : (
-                navLinks.map((link) => {
-                  const Icon = link.icon;
-                  const isActive = location.pathname === link.path;
-                  return (
+                <>
+                  {/* Nav links utama */}
+                  {navLinks.map((link) => {
+                    const Icon = link.icon;
+                    const isActive = location.pathname === link.path;
+                    return (
+                      <Link
+                        key={link.path}
+                        to={link.path}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-lg font-medium ${
+                          isActive
+                            ? "bg-sky-50 text-sky-600"
+                            : "text-slate-600 hover:bg-slate-50"
+                        }`}
+                      >
+                        <Icon className="w-5 h-5" />
+                        {link.label}
+                      </Link>
+                    );
+                  })}
+
+                  {/* Notifikasi di mobile untuk user biasa */}
+                  {isAuthenticated && !isAdmin && (
                     <Link
-                      key={link.path}
-                      to={link.path}
+                      to="/notifications"
                       onClick={() => setMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-lg font-medium ${
-                        isActive
-                          ? "bg-sky-50 text-sky-600"
-                          : "text-slate-600 hover:bg-slate-50"
-                      }`}
+                      className="flex items-center justify-between px-4 py-3 rounded-lg text-slate-600 hover:bg-slate-50 font-medium"
                     >
-                      <Icon className="w-5 h-5" />
-                      {link.label}
+                      <div className="flex items-center gap-3">
+                        <Bell className="w-5 h-5" />
+                        Notifikasi
+                      </div>
+                      {unreadCount > 0 && (
+                        <span className="px-2 py-0.5 bg-red-100 text-red-600 text-xs font-medium rounded-full">
+                          {unreadCount}
+                        </span>
+                      )}
                     </Link>
-                  );
-                })
+                  )}
+                </>
               )}
             </div>
           </motion.div>

@@ -106,7 +106,7 @@ const Register = () => {
   const { strength, label, color } = passwordStrength();
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-sky-50 via-white to-indigo-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-linear-to-br from-[#003C82]/10 via-white to-[#7B68EE]/10 flex items-center justify-center p-4">
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-sky-200 rounded-full opacity-30 blur-3xl" />
@@ -157,7 +157,7 @@ const Register = () => {
               </p>
             </div>
 
-            <div className="flex items-center gap-2 text-sky-600">
+            <div className="flex items-center gap-2 text-primary">
               <Heart className="w-6 h-6 fill-current" />
               <span className="text-lg font-medium">
                 Kesehatan Anda, Prioritas Kami
@@ -282,11 +282,11 @@ const Register = () => {
                   />
                   <label htmlFor="terms" className="text-xs text-slate-600">
                     Saya setuju dengan{" "}
-                    <a href="#" className="text-sky-500 hover:underline">
+                    <a href="#" className="text-primary hover:underline">
                       Syarat & Ketentuan
                     </a>{" "}
                     dan{" "}
-                    <a href="#" className="text-sky-500 hover:underline">
+                    <a href="#" className="text-primary hover:underline">
                       Kebijakan Privasi
                     </a>
                   </label>
@@ -317,7 +317,7 @@ const Register = () => {
               {/* Google Register Button */}
               <button
                 type="button"
-                className="w-full flex items-center justify-center gap-3 px-4 py-3 border-2 border-slate-200 rounded-xl hover:border-slate-300 hover:bg-slate-50 transition-all duration-200 group"
+                className="w-full flex items-center justify-center gap-3 px-4 py-3 border-2 border-slate-200 rounded-xl hover:border-slate-300 hover:bg-slate-50 transition-all duration-200 group cursor-pointer"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path
@@ -337,7 +337,7 @@ const Register = () => {
                     d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                   />
                 </svg>
-                <span className="text-slate-700 font-medium group-hover:text-slate-900">
+                <span className="text-primary font-medium group-hover:text-slate-900">
                   Daftar dengan Google
                 </span>
               </button>
@@ -347,7 +347,7 @@ const Register = () => {
                   Sudah punya akun?{" "}
                   <Link
                     to="/login"
-                    className="text-sky-500 hover:text-sky-600 font-semibold"
+                    className="text-primary font-semibold"
                   >
                     Masuk
                   </Link>

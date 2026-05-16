@@ -10,7 +10,7 @@ const CTASection = ({ isAuthenticated }) => {
           initial={{ opacity: 0, scale: 0.95 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
-          className="bg-gradient-to-r from-sky-500 to-indigo-500 rounded-3xl p-8 md:p-12 text-center text-white"
+          className="bg-linear-to-r from-primary to-secondary rounded-3xl p-8 md:p-12 text-center text-white"
         >
           <h2 className="text-2xl md:text-4xl font-bold mb-4">
             Siap Memulai Perjalanan Pemulihan Anda?
@@ -23,7 +23,7 @@ const CTASection = ({ isAuthenticated }) => {
           {isAuthenticated ? (
             <Link
               to="/bookings/new"
-              className="inline-flex items-center gap-2 px-8 py-4 bg-white text-sky-600 font-semibold rounded-xl hover:shadow-xl transition-all"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-white text-primary font-semibold rounded-xl hover:shadow-xl transition-all"
             >
               Buat Booking
               <ArrowRight className="w-5 h-5" />
@@ -31,7 +31,7 @@ const CTASection = ({ isAuthenticated }) => {
           ) : (
             <Link
               to="/register"
-              className="inline-flex items-center gap-2 px-8 py-4 bg-white text-sky-600 font-semibold rounded-xl hover:shadow-xl transition-all"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-white text-primary font-semibold rounded-xl hover:shadow-xl transition-all"
             >
               Daftar Gratis
               <ArrowRight className="w-5 h-5" />

@@ -180,8 +180,8 @@ const Jadwal = () => {
       <Card>
         <div className="flex flex-col md:flex-row gap-6">
           {/* Photo */}
-          <div className="flex-shrink-0">
-            <div className="w-32 h-32 md:w-40 md:h-40 bg-gradient-to-br from-sky-100 to-indigo-100 rounded-2xl flex items-center justify-center overflow-hidden">
+          <div className="shrink-0">
+            <div className="w-32 h-32 md:w-40 md:h-40 bg-linear-to-br from-sky-100 to-indigo-100 rounded-2xl flex items-center justify-center overflow-hidden">
               {FISIOTERAPIS.foto ? (
                 <img
                   src={FISIOTERAPIS.foto}
@@ -193,7 +193,7 @@ const Jadwal = () => {
                   }}
                 />
               ) : null}
-              <div className="w-full h-full bg-gradient-to-br from-sky-400 to-indigo-500 flex items-center justify-center">
+              <div className="w-full h-full bg-linear-to-br from-sky-400 to-indigo-500 flex items-center justify-center">
                 <User className="w-16 h-16 text-white" />
               </div>
             </div>
@@ -299,7 +299,7 @@ const Jadwal = () => {
               >
                 <ChevronLeft className="w-5 h-5 text-slate-600" />
               </button>
-              <span className="font-medium text-slate-700 min-w-[140px] text-center">
+              <span className="font-medium text-slate-700 min-w-35 text-center">
                 {monthYear}
               </span>
               <button

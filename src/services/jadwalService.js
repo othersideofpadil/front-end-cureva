@@ -19,6 +19,12 @@ const jadwalService = {
     return response.data;
   },
 
+  // Public: Get all slots for a date
+  getSlotsPublic: async (tanggal) => {
+    const response = await api.get(`/jadwal/slots-public/${tanggal}`);
+    return response.data;
+  },
+
   // Admin: Get all slots for a date
   getSlots: async (tanggal) => {
     const response = await api.get(`/jadwal/slots/${tanggal}`);

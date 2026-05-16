@@ -32,8 +32,14 @@ const bookingService = {
   },
 
   // Cancel booking
-  cancel: async (id) => {
-    const response = await api.post(`/bookings/${id}/cancel`);
+  cancel: async (id, data = {}) => {
+    const response = await api.post(`/bookings/${id}/cancel`, data);
+    return response.data;
+  },
+
+  // Reschedule booking
+  reschedule: async (id, data) => {
+    const response = await api.post(`/bookings/${id}/reschedule`, data);
     return response.data;
   },
 
@@ -71,7 +77,7 @@ const bookingService = {
   updateStatus: async (id, status, alasan = "") => {
     const response = await api.put(`/bookings/${id}/status`, {
       status,
-      alasan,
+      alasan_penolakan: alasan,
     });
     return response.data;
   },

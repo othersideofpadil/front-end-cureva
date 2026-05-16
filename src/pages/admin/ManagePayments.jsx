@@ -7,11 +7,9 @@ import {
   X,
   Eye,
   Clock,
-  AlertCircle,
   DollarSign,
   Filter,
 } from "lucide-react";
-import toast from "react-hot-toast";
 import { paymentService } from "../../services";
 import {
   Card,
@@ -53,7 +51,7 @@ const ManagePayments = () => {
       setShowModal(false);
     } catch (error) {
       toast.error(
-        error.response?.data?.message || "Gagal mengkonfirmasi pembayaran"
+        error.response?.data?.message || "Gagal mengkonfirmasi pembayaran",
       );
     }
   };
@@ -91,13 +89,7 @@ const ManagePayments = () => {
   };
 
   const getStatusBadge = (status) => {
-    const statusMap = {
-      menunggu: { variant: "warning", label: "Menunggu" },
-      dibayar: { variant: "success", label: "Dibayar" },
-      gagal: { variant: "danger", label: "Gagal" },
-    };
-    const s = statusMap[status] || { variant: "secondary", label: status };
-    return <Badge variant={s.variant}>{s.label}</Badge>;
+    return <Badge status={status} showIcon={false} />;
   };
 
   const filteredPayments = payments.filter((p) => {
@@ -214,107 +206,15 @@ const ManagePayments = () => {
         </div>
       </Card>
 
-      {/* Payments Table */}
+      {/* Payments Cards */}
       <Card padding="none">
-        {/* Desktop Table */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-slate-50 border-b border-slate-100">
-              <tr>
-                <th className="text-left px-4 py-3 text-sm font-semibold text-slate-600">
-                  Kode Booking
-                </th>
-                <th className="text-left px-4 py-3 text-sm font-semibold text-slate-600">
-                  Pelanggan
-                </th>
-                <th className="text-left px-4 py-3 text-sm font-semibold text-slate-600">
-                  Metode
-                </th>
-                <th className="text-left px-4 py-3 text-sm font-semibold text-slate-600">
-                  Jumlah
-                </th>
-                <th className="text-left px-4 py-3 text-sm font-semibold text-slate-600">
-                  Status
-                </th>
-                <th className="text-left px-4 py-3 text-sm font-semibold text-slate-600">
-                  Tanggal
-                </th>
-                <th className="text-center px-4 py-3 text-sm font-semibold text-slate-600">
-                  Aksi
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredPayments.map((payment) => (
-                <tr key={payment.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3">
-                    <span className="font-mono text-sm text-sky-600">
-                      {payment.kode_booking}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-slate-700">
-                    {payment.nama_pasien || "-"}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-slate-600">
-                    {payment.metode || "Transfer"}
-                  </td>
-                  <td className="px-4 py-3 font-semibold text-slate-800">
-                    {formatPrice(payment.jumlah)}
-                  </td>
-                  <td className="px-4 py-3">
-                    {getStatusBadge(payment.status)}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-slate-500">
-                    {formatDate(payment.created_at)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-center gap-1">
-                      <button
-                        onClick={() => {
-                          setSelectedPayment(payment);
-                          setShowModal(true);
-                        }}
-                        className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      {payment.status === "menunggu" && (
-                        <>
-                          <button
-                            onClick={() =>
-                              handleConfirmPayment(
-                                payment.pemesanan_id || payment.id
-                              )
-                            }
-                            className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg"
-                          >
-                            <Check className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() =>
-                              handleRejectPayment(
-                                payment.pemesanan_id || payment.id
-                              )
-                            }
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Mobile Card View */}
-        <div className="md:hidden divide-y divide-slate-100">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 p-4">
           {filteredPayments.map((payment) => (
-            <div key={payment.id} className="p-4 hover:bg-slate-50">
-              <div className="flex items-start justify-between mb-3">
+            <div
+              key={payment.id}
+              className="border border-slate-100 rounded-2xl p-4 hover:shadow-sm hover:border-slate-200 transition"
+            >
+              <div className="flex items-start justify-between gap-3">
                 <div>
                   <span className="font-mono text-sm text-sky-600 font-semibold">
                     {payment.kode_booking}
@@ -323,35 +223,40 @@ const ManagePayments = () => {
                     {payment.nama_pasien || "-"}
                   </p>
                 </div>
-                {getStatusBadge(payment.status)}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500">Status:</span>
+                  {getStatusBadge(payment.status)}
+                </div>
               </div>
-              <div className="space-y-2 text-sm">
+
+              <div className="mt-4 space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Metode:</span>
+                  <span className="text-slate-500">Metode</span>
                   <span className="text-slate-700">
                     {payment.metode || "Transfer"}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Jumlah:</span>
+                  <span className="text-slate-500">Jumlah</span>
                   <span className="font-semibold text-slate-800">
                     {formatPrice(payment.jumlah)}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Tanggal:</span>
+                  <span className="text-slate-500">Tanggal</span>
                   <span className="text-slate-600">
                     {formatDate(payment.created_at)}
                   </span>
                 </div>
               </div>
-              <div className="flex gap-2 mt-4">
+
+              <div className="flex flex-wrap gap-2 mt-4">
                 <button
                   onClick={() => {
                     setSelectedPayment(payment);
                     setShowModal(true);
                   }}
-                  className="flex-1 px-3 py-2 text-sm text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center justify-center gap-2"
+                  className="flex-1 min-w-30 px-3 py-2 text-sm text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center justify-center gap-2"
                 >
                   <Eye className="w-4 h-4" />
                   Detail
@@ -362,7 +267,7 @@ const ManagePayments = () => {
                       onClick={() =>
                         handleConfirmPayment(payment.pemesanan_id || payment.id)
                       }
-                      className="flex-1 px-3 py-2 text-sm text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg flex items-center justify-center gap-2"
+                      className="flex-1 min-w-35 px-3 py-2 text-sm text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg flex items-center justify-center gap-2"
                     >
                       <Check className="w-4 h-4" />
                       Konfirmasi
@@ -384,7 +289,6 @@ const ManagePayments = () => {
 
         {filteredPayments.length === 0 && (
           <div className="text-center py-12 text-slate-500">
-            <AlertCircle className="w-12 h-12 mx-auto mb-3 text-slate-300" />
             <p>Tidak ada data pembayaran</p>
           </div>
         )}
@@ -424,7 +328,7 @@ const ManagePayments = () => {
                 <div>
                   <p className="text-slate-500">Pelanggan</p>
                   <p className="font-semibold text-slate-800">
-                    {selectedPayment.nama_user || "-"}
+                    {selectedPayment.nama_pasien || "-"}
                   </p>
                 </div>
                 <div>
@@ -447,7 +351,7 @@ const ManagePayments = () => {
                     variant="secondary"
                     onClick={() =>
                       handleRejectPayment(
-                        selectedPayment.pemesanan_id || selectedPayment.id
+                        selectedPayment.pemesanan_id || selectedPayment.id,
                       )
                     }
                     className="flex-1"
@@ -457,7 +361,7 @@ const ManagePayments = () => {
                   <Button
                     onClick={() =>
                       handleConfirmPayment(
-                        selectedPayment.pemesanan_id || selectedPayment.id
+                        selectedPayment.pemesanan_id || selectedPayment.id,
                       )
                     }
                     className="flex-1"
