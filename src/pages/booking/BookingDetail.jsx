@@ -13,7 +13,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { bookingService } from "../../services";
+import { bookingService, jadwalService } from "../../services";
 import {
   Button,
   Badge,
@@ -32,6 +32,28 @@ const formatDate = (dateStr) =>
   });
 
 const formatTime = (timeStr) => timeStr?.slice(0, 5) || "";
+
+const addMinutes = (timeStr, minutesToAdd) => {
+  const [hour, minute] = formatTime(timeStr).split(":").map(Number);
+  const totalMinutes = hour * 60 + minute + minutesToAdd;
+  if (Number.isNaN(totalMinutes) || totalMinutes < 0) return null;
+  const hours = Math.floor(totalMinutes / 60)
+    .toString()
+    .padStart(2, "0");
+  const minutes = (totalMinutes % 60).toString().padStart(2, "0");
+  return `${hours}:${minutes}`;
+};
+
+const getBufferTimes = (slots) => {
+  const bufferTimes = new Set();
+  slots
+    .filter((slot) => slot.status === "dipesan")
+    .forEach((slot) => {
+      const nextTime = addMinutes(slot.waktu_mulai, 60);
+      if (nextTime) bufferTimes.add(nextTime);
+    });
+  return bufferTimes;
+};
 
 const formatPrice = (val) => `Rp ${(val || 0).toLocaleString("id-ID")}`;
 
@@ -53,7 +75,9 @@ const IconTile = ({ icon: Icon, label, value }) => (
     </div>
     <div className="min-w-0">
       <p className="text-xs text-slate-400 leading-none mb-0.5">{label}</p>
-      <p className="text-sm font-medium text-slate-800 wrap-break-word">{value}</p>
+      <p className="text-sm font-medium text-slate-800 wrap-break-word">
+        {value}
+      </p>
     </div>
   </div>
 );
@@ -72,9 +96,18 @@ const BookingDetail = () => {
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
   const [ratingLoading, setRatingLoading] = useState(false);
+  const [rescheduleLoading, setRescheduleLoading] = useState(false);
+  const [rescheduleSubmitting, setRescheduleSubmitting] = useState(false);
+  const [rescheduleForm, setRescheduleForm] = useState({
+    tanggal: "",
+    waktu: "",
+  });
+  const [availableSlots, setAvailableSlots] = useState([]);
 
   useEffect(() => {
     fetchBooking();
@@ -100,16 +133,60 @@ const BookingDetail = () => {
   };
 
   const handleCancel = async () => {
+    if (!cancelReason.trim()) {
+      toast.error("Alasan pembatalan wajib diisi");
+      return;
+    }
     setCancelLoading(true);
     try {
-      await bookingService.cancel(id);
+      await bookingService.cancel(id, cancelReason.trim());
       toast.success("Booking berhasil dibatalkan");
       fetchBooking();
       setShowCancelModal(false);
+      setCancelReason("");
     } catch (error) {
       toast.error(error.response?.data?.message || "Gagal membatalkan booking");
     } finally {
       setCancelLoading(false);
+    }
+  };
+
+  const fetchRescheduleSlots = async (tanggal) => {
+    if (!tanggal) return;
+    setRescheduleLoading(true);
+    try {
+      const response = await jadwalService.getSlotsPublic(tanggal);
+      setAvailableSlots(response.data || []);
+    } catch (error) {
+      setAvailableSlots([]);
+      toast.error(
+        error.response?.data?.message || "Gagal memuat slot tersedia",
+      );
+    } finally {
+      setRescheduleLoading(false);
+    }
+  };
+
+  const handleRescheduleSubmit = async () => {
+    if (!rescheduleForm.tanggal || !rescheduleForm.waktu) {
+      toast.error("Tanggal dan waktu wajib dipilih");
+      return;
+    }
+
+    setRescheduleSubmitting(true);
+    try {
+      await bookingService.reschedule(id, rescheduleForm);
+      toast.success("Permintaan jadwal ulang dikirim");
+      setShowRescheduleModal(false);
+      setRescheduleForm({ tanggal: "", waktu: "" });
+      setAvailableSlots([]);
+      fetchBooking();
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message || "Gagal mengajukan jadwal ulang",
+      );
+    } finally {
+      setRescheduleSubmitting(false);
     }
   };
 
@@ -132,6 +209,7 @@ const BookingDetail = () => {
     "dikonfirmasi",
     "dijadwalkan",
   ].includes(booking?.status);
+  const canReschedule = booking?.status === "dikonfirmasi";
   const canRate = booking?.status === "selesai" && !booking?.rating;
   const isPaid = ["dibayar"].includes(
     booking?.pembayaran?.status || booking?.status_pembayaran,
@@ -142,6 +220,7 @@ const BookingDetail = () => {
     "cash_on_visit"
       ? "Bayar di Tempat"
       : "Transfer";
+  const bufferTimes = getBufferTimes(availableSlots);
 
   if (loading) return <LoadingSpinner fullScreen />;
   if (!booking) return null;
@@ -157,6 +236,16 @@ const BookingDetail = () => {
           onClick={() => setShowRatingModal(true)}
         >
           Beri Rating
+        </Button>
+      )}
+      {canReschedule && (
+        <Button
+          variant="secondary"
+          leftIcon={RefreshCw}
+          className="w-full justify-center"
+          onClick={() => setShowRescheduleModal(true)}
+        >
+          Atur Ulang Jadwal
         </Button>
       )}
       {canCancel && (
@@ -238,7 +327,9 @@ const BookingDetail = () => {
               <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-semibold text-red-700">
-                  Alasan Penolakan
+                  {booking.status?.includes("dibatalkan")
+                    ? "Alasan Pembatalan"
+                    : "Alasan Penolakan"}
                 </p>
                 <p className="text-sm text-red-600 mt-0.5">
                   {booking.alasan_penolakan}
@@ -356,7 +447,7 @@ const BookingDetail = () => {
               )}
 
               {/* Action buttons — mobile & tablet (below lg) */}
-              {(canRate || canCancel) && (
+              {(canRate || canCancel || canReschedule) && (
                 <motion.div
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -441,7 +532,7 @@ const BookingDetail = () => {
       </div>
 
       {/* ── Sticky bottom action bar — mobile only ── */}
-      {(canRate || canCancel) && (
+      {(canRate || canCancel || canReschedule) && (
         <div className="sticky bottom-0 z-10 sm:hidden bg-white border-t border-slate-200 px-4 py-3 shadow-lg">
           <div className="flex gap-2">
             {canRate && (
@@ -452,6 +543,16 @@ const BookingDetail = () => {
                 onClick={() => setShowRatingModal(true)}
               >
                 Beri Rating
+              </Button>
+            )}
+            {canReschedule && (
+              <Button
+                variant="secondary"
+                leftIcon={RefreshCw}
+                className="flex-1 justify-center"
+                onClick={() => setShowRescheduleModal(true)}
+              >
+                Atur Ulang Jadwal
               </Button>
             )}
             {canCancel && (
@@ -475,13 +576,19 @@ const BookingDetail = () => {
       {/* ── Cancel Modal ── */}
       <Modal
         isOpen={showCancelModal}
-        onClose={() => setShowCancelModal(false)}
+        onClose={() => {
+          setShowCancelModal(false);
+          setCancelReason("");
+        }}
         title="Batalkan Booking"
         footer={
           <>
             <Button
               variant="secondary"
-              onClick={() => setShowCancelModal(false)}
+              onClick={() => {
+                setShowCancelModal(false);
+                setCancelReason("");
+              }}
             >
               Tidak
             </Button>
@@ -505,6 +612,132 @@ const BookingDetail = () => {
             <span className="text-slate-400">
               Tindakan ini tidak dapat dibatalkan.
             </span>
+          </p>
+          <div className="mt-4 text-left">
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Alasan Pembatalan
+            </label>
+            <textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              rows={3}
+              placeholder="Tuliskan alasan pembatalan..."
+              className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-300"
+            />
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── Reschedule Modal ── */}
+      <Modal
+        isOpen={showRescheduleModal}
+        onClose={() => {
+          setShowRescheduleModal(false);
+          setRescheduleForm({ tanggal: "", waktu: "" });
+          setAvailableSlots([]);
+        }}
+        title="Atur Ulang Jadwal"
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setShowRescheduleModal(false);
+                setRescheduleForm({ tanggal: "", waktu: "" });
+                setAvailableSlots([]);
+              }}
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={handleRescheduleSubmit}
+              loading={rescheduleSubmitting}
+            >
+              Ajukan Perubahan
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Tanggal Baru
+            </label>
+            <input
+              type="date"
+              value={rescheduleForm.tanggal}
+              onChange={(e) => {
+                const tanggal = e.target.value;
+                setRescheduleForm((prev) => ({
+                  ...prev,
+                  tanggal,
+                  waktu: "",
+                }));
+                fetchRescheduleSlots(tanggal);
+              }}
+              className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-300"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Waktu Baru
+            </label>
+            <select
+              value={rescheduleForm.waktu}
+              onChange={(e) =>
+                setRescheduleForm((prev) => ({
+                  ...prev,
+                  waktu: e.target.value,
+                }))
+              }
+              className="w-full px-3 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-300"
+            >
+              <option value="">
+                {rescheduleLoading ? "Memuat slot..." : "Pilih waktu"}
+              </option>
+              {availableSlots.map((slot) => {
+                const slotTime = formatTime(slot.waktu_mulai);
+                const isBuffer = bufferTimes.has(slotTime);
+                const isBooked = slot.status === "dipesan";
+                const isBlocked = slot.status === "diblock_admin";
+                const isHoliday = slot.status === "libur";
+                const now = new Date();
+                const isPast =
+                  rescheduleForm.tanggal &&
+                  new Date(`${rescheduleForm.tanggal}T${slotTime}:00`) <= now;
+
+                const isDisabled = isBooked || isBlocked || isHoliday || isPast;
+
+                let statusLabel = "Tersedia";
+                if (isBuffer) statusLabel = "Buffer";
+                else if (isBooked) statusLabel = "Terpesan";
+                else if (isBlocked) statusLabel = "Diblokir";
+                else if (isHoliday) statusLabel = "Libur";
+                else if (isPast) statusLabel = "Lewat";
+
+                return (
+                  <option
+                    key={slot.id}
+                    value={slot.waktu_mulai}
+                    disabled={isDisabled}
+                  >
+                    {formatTime(slot.waktu_mulai)} WIB - {statusLabel}
+                  </option>
+                );
+              })}
+            </select>
+            {!rescheduleLoading &&
+              rescheduleForm.tanggal &&
+              availableSlots.length === 0 && (
+                <p className="mt-2 text-xs text-slate-500">
+                  Tidak ada slot untuk tanggal ini.
+                </p>
+              )}
+          </div>
+
+          <p className="text-xs text-slate-500">
+            Perubahan jadwal akan kembali menunggu konfirmasi fisioterapis.
           </p>
         </div>
       </Modal>

@@ -20,8 +20,8 @@ import {
   ManageLayanan,
   ManageJadwal,
   ManagePayments,
+  ManageRatings,
   Reports,
-  Settings,
 } from "./pages";
 
 function App() {
@@ -49,7 +49,7 @@ function App() {
       <Route
         path="/bookings"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute disallowAdmin>
             <MainLayout>
               <BookingList />
             </MainLayout>
@@ -59,7 +59,7 @@ function App() {
       <Route
         path="/bookings/new"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute disallowAdmin>
             <MainLayout>
               <CreateBooking />
             </MainLayout>
@@ -69,7 +69,7 @@ function App() {
       <Route
         path="/bookings/:id"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute disallowAdmin>
             <MainLayout>
               <BookingDetail />
             </MainLayout>
@@ -159,6 +159,16 @@ function App() {
         }
       />
       <Route
+        path="/admin/bookings/:id"
+        element={
+          <ProtectedRoute adminOnly>
+            <MainLayout>
+              <BookingDetail />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/admin/users"
         element={
           <ProtectedRoute adminOnly>
@@ -199,21 +209,21 @@ function App() {
         }
       />
       <Route
-        path="/admin/reports"
+        path="/admin/ratings"
         element={
           <ProtectedRoute adminOnly>
             <MainLayout>
-              <Reports />
+              <ManageRatings />
             </MainLayout>
           </ProtectedRoute>
         }
       />
       <Route
-        path="/admin/settings"
+        path="/admin/reports"
         element={
           <ProtectedRoute adminOnly>
             <MainLayout>
-              <Settings />
+              <Reports />
             </MainLayout>
           </ProtectedRoute>
         }

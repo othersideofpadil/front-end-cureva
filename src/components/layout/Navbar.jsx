@@ -181,20 +181,18 @@ const Navbar = ({ isLandingPage = false, unreadCountProp = null }) => {
           <div className="flex items-center gap-2">
             {isAuthenticated ? (
               <>
-                {/* Notifikasi Bell — tampil di semua halaman, desktop, non-admin */}
-                {!isAdmin && (
-                  <Link
-                    to="/notifications"
-                    className="relative hidden md:flex items-center justify-center w-9 h-9 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
-                  >
-                    <Bell className="w-5 h-5" />
-                    {unreadCount > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                        {unreadCount > 9 ? "9+" : unreadCount}
-                      </span>
-                    )}
-                  </Link>
-                )}
+                {/* Notifikasi Bell — tampil di semua halaman, desktop */}
+                <Link
+                  to="/notifications"
+                  className="relative hidden md:flex items-center justify-center w-9 h-9 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                >
+                  <Bell className="w-5 h-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  )}
+                </Link>
 
                 {/* User Dropdown — hanya Profil + Keluar */}
                 <div className="relative">

@@ -31,12 +31,6 @@ const jadwalService = {
     return response.data;
   },
 
-  // Admin: Update default schedule for a day
-  updateDefault: async (hari, data) => {
-    const response = await api.put(`/jadwal/default/${hari}`, data);
-    return response.data;
-  },
-
   // Admin: Generate slots for date range
   generateSlots: async (data) => {
     const response = await api.post("/jadwal/generate", data);
@@ -46,6 +40,24 @@ const jadwalService = {
   // Admin: Block a slot
   blockSlot: async (id) => {
     const response = await api.post(`/jadwal/slot/${id}/block`);
+    return response.data;
+  },
+
+  // Admin: Create slot
+  createSlot: async (data) => {
+    const response = await api.post("/jadwal/slot", data);
+    return response.data;
+  },
+
+  // Admin: Update slot
+  updateSlot: async (id, data) => {
+    const response = await api.patch(`/jadwal/slot/${id}`, data);
+    return response.data;
+  },
+
+  // Admin: Delete slot
+  deleteSlot: async (id) => {
+    const response = await api.delete(`/jadwal/slot/${id}`);
     return response.data;
   },
 

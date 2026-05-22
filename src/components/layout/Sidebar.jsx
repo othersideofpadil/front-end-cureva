@@ -6,7 +6,6 @@ import {
   Users,
   FileText,
   CreditCard,
-  Settings,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -45,8 +44,8 @@ const Sidebar = ({
     { path: "/admin/layanan", icon: FileText, label: "Layanan" },
     { path: "/admin/jadwal", icon: Clock, label: "Jadwal" },
     { path: "/admin/payments", icon: CreditCard, label: "Pembayaran" },
+    { path: "/admin/ratings", icon: Heart, label: "Rating & Review" },
     { path: "/admin/reports", icon: BarChart3, label: "Laporan" },
-    { path: "/admin/settings", icon: Settings, label: "Pengaturan" },
   ];
 
   const userLinks = [
@@ -54,7 +53,6 @@ const Sidebar = ({
     { path: "/bookings", icon: Calendar, label: "Booking Saya" },
     { path: "/layanan", icon: FileText, label: "Layanan" },
     { path: "/profile", icon: Users, label: "Profil" },
-    { path: "/settings", icon: Settings, label: "Pengaturan" },
   ];
 
   const links = isAdmin ? adminLinks : userLinks;
@@ -63,10 +61,11 @@ const Sidebar = ({
     <motion.aside
       initial={false}
       animate={{
-        width: collapsed ? 80 : 256,
-        x: mobileMenuOpen ? 0 : -256,
+        width: isLargeScreen ? (collapsed ? 80 : 256) : 256,
+        x: isLargeScreen ? 0 : mobileMenuOpen ? 0 : -256,
       }}
-      className="fixed left-0 top-0 h-screen bg-white border-r border-slate-100 z-40 lg:translate-x-0"
+      transition={{ type: "tween", duration: 0.22 }}
+      className="fixed left-0 top-0 h-screen bg-white border-r border-slate-100 z-40"
     >
       <div className="flex flex-col h-full">
         {/* Logo */}
@@ -140,13 +139,18 @@ const Sidebar = ({
             {!collapsed && <span>Keluar</span>}
           </button>
 
+          {/* Desktop: collapse/expand — Mobile/Tablet: close drawer */}
           <button
-            onClick={() => setCollapsed(!collapsed)}
+            onClick={() =>
+              isLargeScreen
+                ? setCollapsed(!collapsed)
+                : setMobileMenuOpen(false)
+            }
             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-slate-50 w-full transition-colors ${
-              collapsed ? "justify-center" : ""
+              collapsed && isLargeScreen ? "justify-center" : ""
             }`}
           >
-            {collapsed ? (
+            {collapsed && isLargeScreen ? (
               <ChevronRight className="w-5 h-5" />
             ) : (
               <>

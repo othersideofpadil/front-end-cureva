@@ -33,6 +33,6 @@ export {
   ManageLayanan,
   ManageJadwal,
   ManagePayments,
+  ManageRatings,
   Reports,
-  Settings,
 } from "./admin";

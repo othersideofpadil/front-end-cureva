@@ -31,9 +31,9 @@ const bookingService = {
     return response.data;
   },
 
-  // Cancel booking
-  cancel: async (id, data = {}) => {
-    const response = await api.post(`/bookings/${id}/cancel`, data);
+  // Cancel booking (requires alasan)
+  cancel: async (id, alasan) => {
+    const response = await api.post(`/bookings/${id}/cancel`, { alasan });
     return response.data;
   },
 
@@ -64,6 +64,18 @@ const bookingService = {
   // Get all ratings
   getAllRatings: async (params = {}) => {
     const response = await api.get("/bookings/ratings", { params });
+    return response.data;
+  },
+
+  // Admin: Update rating
+  updateRating: async (id, data) => {
+    const response = await api.put(`/bookings/ratings/${id}`, data);
+    return response.data;
+  },
+
+  // Admin: Delete rating
+  deleteRating: async (id) => {
+    const response = await api.delete(`/bookings/ratings/${id}`);
     return response.data;
   },
 

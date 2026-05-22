@@ -15,13 +15,19 @@ const layananService = {
 
   // Admin: Create service
   create: async (data) => {
-    const response = await api.post("/layanan", data);
+    const isFormData = data instanceof FormData;
+    const response = await api.post("/layanan", data, {
+      headers: isFormData ? { "Content-Type": "multipart/form-data" } : {},
+    });
     return response.data;
   },
 
   // Admin: Update service
   update: async (id, data) => {
-    const response = await api.put(`/layanan/${id}`, data);
+    const isFormData = data instanceof FormData;
+    const response = await api.put(`/layanan/${id}`, data, {
+      headers: isFormData ? { "Content-Type": "multipart/form-data" } : {},
+    });
     return response.data;
   },
 

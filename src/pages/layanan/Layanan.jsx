@@ -28,8 +28,8 @@ const Layanan = () => {
         layanan.filter(
           (item) =>
             item.nama?.toLowerCase().includes(searchLower) ||
-            item.deskripsi?.toLowerCase().includes(searchLower)
-        )
+            item.deskripsi?.toLowerCase().includes(searchLower),
+        ),
       );
     } else {
       setFilteredLayanan(layanan);
@@ -95,9 +95,9 @@ const Layanan = () => {
               <Card hover className="h-full flex flex-col">
                 {/* Image Placeholder */}
                 <div className="aspect-video bg-linear-to-br from-sky-100 to-indigo-100 rounded-xl mb-4 flex items-center justify-center overflow-hidden">
-                  {item.gambar ? (
+                  {item.gambar_url ? (
                     <img
-                      src={item.gambar}
+                      src={item.gambar_url}
                       alt={item.nama}
                       className="w-full h-full object-cover"
                     />

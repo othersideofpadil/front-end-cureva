@@ -10,6 +10,11 @@ const Modal = ({
   size = "md",
   showClose = true,
   footer,
+  responsive = false,
+  contentClassName = "",
+  bodyClassName = "",
+  headerClassName = "",
+  footerClassName = "",
 }) => {
   const sizes = {
     sm: "max-w-md",
@@ -33,7 +38,11 @@ const Modal = ({
           />
 
           {/* Modal */}
-          <div className="flex min-h-full items-center justify-center p-4">
+          <div
+            className={`flex min-h-full justify-center p-4 ${
+              responsive ? "items-end md:items-center" : "items-center"
+            }`}
+          >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -41,18 +50,25 @@ const Modal = ({
               transition={{ duration: 0.2 }}
               className={`
                 relative w-full ${sizes[size]}
-                bg-white rounded-2xl shadow-2xl
-                overflow-hidden
+                bg-white shadow-2xl overflow-hidden
+                ${responsive ? "rounded-t-3xl md:rounded-2xl" : "rounded-2xl"}
+                ${responsive ? "flex flex-col max-h-[92dvh] md:max-h-[88vh]" : ""}
+                ${contentClassName}
               `}
             >
               {/* Header */}
               {(title || showClose) && (
-                <div className="flex items-center justify-between p-6 border-b border-slate-100">
-                  {title && (
-                    <h3 className="text-xl font-bold text-slate-800">
-                      {title}
-                    </h3>
-                  )}
+                <div
+                  className={`flex items-center justify-between p-6 border-b border-slate-100 ${headerClassName}`}
+                >
+                  {title &&
+                    (typeof title === "string" ? (
+                      <h3 className="text-xl font-bold text-slate-800">
+                        {title}
+                      </h3>
+                    ) : (
+                      title
+                    ))}
                   {showClose && (
                     <button
                       onClick={onClose}
@@ -65,11 +81,17 @@ const Modal = ({
               )}
 
               {/* Body */}
-              <div className="p-6">{children}</div>
+              <div
+                className={`p-6 ${responsive ? "flex-1 overflow-y-auto" : ""} ${bodyClassName}`}
+              >
+                {children}
+              </div>
 
               {/* Footer */}
               {footer && (
-                <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-100 bg-slate-50">
+                <div
+                  className={`flex items-center justify-end gap-3 p-6 border-t border-slate-100 bg-slate-50 ${footerClassName}`}
+                >
                   {footer}
                 </div>
               )}

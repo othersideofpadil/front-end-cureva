@@ -30,18 +30,6 @@ const adminService = {
     const response = await api.delete(`/admin/users/${id}`);
     return response.data;
   },
-
-  // Get settings
-  getSettings: async () => {
-    const response = await api.get("/admin/settings");
-    return response.data;
-  },
-
-  // Update settings
-  updateSettings: async (data) => {
-    const response = await api.put("/admin/settings", data);
-    return response.data;
-  },
 };
 
 export default adminService;

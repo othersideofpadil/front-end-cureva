@@ -9,8 +9,10 @@ import {
   Clock,
   DollarSign,
   Filter,
+  Trash2,
 } from "lucide-react";
 import { paymentService } from "../../services";
+import toast from "react-hot-toast";
 import {
   Card,
   Button,
@@ -26,6 +28,10 @@ const ManagePayments = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   useEffect(() => {
     fetchPayments();
@@ -56,17 +62,35 @@ const ManagePayments = () => {
     }
   };
 
-  const handleRejectPayment = async (pemesananId) => {
-    const reason = window.prompt("Alasan penolakan:");
-    if (!reason) return;
-
+  const handleRejectPayment = async (pemesananId, reason) => {
+    if (!reason?.trim()) {
+      toast.error("Alasan penolakan wajib diisi");
+      return;
+    }
     try {
-      await paymentService.reject(pemesananId, reason);
+      await paymentService.reject(pemesananId, reason.trim());
       toast.success("Pembayaran ditolak");
       fetchPayments();
       setShowModal(false);
+      setShowRejectModal(false);
+      setRejectReason("");
     } catch (error) {
       toast.error("Gagal menolak pembayaran");
+    }
+  };
+
+  const handleDeletePayment = async () => {
+    if (!deleteTarget) return;
+    try {
+      await paymentService.delete(deleteTarget.id);
+      toast.success("Pembayaran berhasil dihapus");
+      fetchPayments();
+      setShowDeleteModal(false);
+      setDeleteTarget(null);
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message || "Gagal menghapus pembayaran",
+      );
     }
   };
 
@@ -261,27 +285,43 @@ const ManagePayments = () => {
                   <Eye className="w-4 h-4" />
                   Detail
                 </button>
-                {payment.status === "menunggu" && (
-                  <>
-                    <button
-                      onClick={() =>
-                        handleConfirmPayment(payment.pemesanan_id || payment.id)
-                      }
-                      className="flex-1 min-w-35 px-3 py-2 text-sm text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg flex items-center justify-center gap-2"
-                    >
-                      <Check className="w-4 h-4" />
-                      Konfirmasi
-                    </button>
-                    <button
-                      onClick={() =>
-                        handleRejectPayment(payment.pemesanan_id || payment.id)
-                      }
-                      className="px-3 py-2 text-sm text-red-600 bg-red-50 hover:bg-red-100 rounded-lg flex items-center justify-center"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </>
-                )}
+                {payment.status === "menunggu" &&
+                  payment.status_pemesanan === "selesai" && (
+                    <>
+                      <button
+                        onClick={() =>
+                          handleConfirmPayment(
+                            payment.pemesanan_id || payment.id,
+                          )
+                        }
+                        className="flex-1 min-w-35 px-3 py-2 text-sm text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg flex items-center justify-center gap-2"
+                      >
+                        <Check className="w-4 h-4" />
+                        Konfirmasi
+                      </button>
+                      <button
+                        onClick={() =>
+                          (() => {
+                            setSelectedPayment(payment);
+                            setRejectReason("");
+                            setShowRejectModal(true);
+                          })()
+                        }
+                        className="px-3 py-2 text-sm text-red-600 bg-red-50 hover:bg-red-100 rounded-lg flex items-center justify-center"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </>
+                  )}
+                <button
+                  onClick={() => {
+                    setDeleteTarget(payment);
+                    setShowDeleteModal(true);
+                  }}
+                  className="px-3 py-2 text-sm text-red-600 bg-red-50 hover:bg-red-100 rounded-lg flex items-center justify-center"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
             </div>
           ))}
@@ -295,85 +335,187 @@ const ManagePayments = () => {
       </Card>
 
       {/* Detail Modal */}
-      {showModal && selectedPayment && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl shadow-xl w-full max-w-md"
-          >
-            <div className="flex items-center justify-between p-4 border-b border-slate-100">
-              <h2 className="text-lg font-semibold text-slate-800">
-                Detail Pembayaran
-              </h2>
-              <button
-                onClick={() => setShowModal(false)}
-                className="p-2 hover:bg-slate-100 rounded-lg"
+      <Modal
+        isOpen={showModal && !!selectedPayment}
+        onClose={() => setShowModal(false)}
+        title="Detail Pembayaran"
+        size="md"
+        responsive
+        footerClassName="flex-col sm:flex-row"
+        footer={
+          selectedPayment?.status === "menunggu" &&
+          selectedPayment?.status_pemesanan === "selesai" ? (
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setRejectReason("");
+                  setShowRejectModal(true);
+                }}
+                className="flex-1"
               >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-4 space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-slate-500">Kode Booking</p>
-                  <p className="font-semibold text-slate-800">
-                    {selectedPayment.kode_booking}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-slate-500">Status</p>
-                  {getStatusBadge(selectedPayment.status)}
-                </div>
-                <div>
-                  <p className="text-slate-500">Pelanggan</p>
-                  <p className="font-semibold text-slate-800">
-                    {selectedPayment.nama_pasien || "-"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-slate-500">Metode</p>
-                  <p className="font-semibold text-slate-800">
-                    {selectedPayment.metode || "Transfer"}
-                  </p>
-                </div>
-                <div className="col-span-2">
-                  <p className="text-slate-500">Jumlah</p>
-                  <p className="text-2xl font-bold text-sky-600">
-                    {formatPrice(selectedPayment.jumlah)}
-                  </p>
-                </div>
+                Tolak
+              </Button>
+              <Button
+                onClick={() =>
+                  handleConfirmPayment(
+                    selectedPayment.pemesanan_id || selectedPayment.id,
+                  )
+                }
+                className="flex-1"
+              >
+                Konfirmasi
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="secondary"
+              onClick={() => setShowModal(false)}
+              className="flex-1"
+            >
+              Tutup
+            </Button>
+          )
+        }
+      >
+        {selectedPayment && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-slate-500">Kode Booking</p>
+                <p className="font-semibold text-slate-800">
+                  {selectedPayment.kode_booking}
+                </p>
               </div>
-
-              {selectedPayment.status === "menunggu" && (
-                <div className="flex gap-3 pt-4 border-t border-slate-100">
-                  <Button
-                    variant="secondary"
-                    onClick={() =>
-                      handleRejectPayment(
-                        selectedPayment.pemesanan_id || selectedPayment.id,
-                      )
-                    }
-                    className="flex-1"
-                  >
-                    Tolak
-                  </Button>
-                  <Button
-                    onClick={() =>
-                      handleConfirmPayment(
-                        selectedPayment.pemesanan_id || selectedPayment.id,
-                      )
-                    }
-                    className="flex-1"
-                  >
-                    Konfirmasi
-                  </Button>
-                </div>
-              )}
+              <div>
+                <p className="text-slate-500">Status</p>
+                {getStatusBadge(selectedPayment.status)}
+              </div>
+              <div>
+                <p className="text-slate-500">Pelanggan</p>
+                <p className="font-semibold text-slate-800">
+                  {selectedPayment.nama_pasien || "-"}
+                </p>
+              </div>
+              <div>
+                <p className="text-slate-500">Metode</p>
+                <p className="font-semibold text-slate-800">
+                  {selectedPayment.metode || "Transfer"}
+                </p>
+              </div>
+              <div className="col-span-2">
+                <p className="text-slate-500">Jumlah</p>
+                <p className="text-2xl font-bold text-sky-600">
+                  {formatPrice(selectedPayment.jumlah)}
+                </p>
+              </div>
             </div>
-          </motion.div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Delete Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setDeleteTarget(null);
+        }}
+        title="Hapus Pembayaran"
+        size="md"
+        responsive
+        footerClassName="flex-col sm:flex-row"
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setShowDeleteModal(false);
+                setDeleteTarget(null);
+              }}
+              className="flex-1"
+            >
+              Batal
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleDeletePayment}
+              className="flex-1"
+            >
+              Hapus
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-slate-600">
+            Apakah Anda yakin ingin menghapus pembayaran ini? Tindakan ini tidak
+            dapat dibatalkan.
+          </p>
+          {deleteTarget && (
+            <div className="p-3 bg-slate-50 rounded-xl text-sm">
+              <p className="font-semibold text-slate-800">
+                {deleteTarget.kode_booking}
+              </p>
+              <p className="text-slate-500">
+                {deleteTarget.nama_pasien || "-"} · {deleteTarget.metode || "-"}
+              </p>
+            </div>
+          )}
         </div>
-      )}
+      </Modal>
+
+      {/* Reject Modal */}
+      <Modal
+        isOpen={showRejectModal}
+        onClose={() => {
+          setShowRejectModal(false);
+          setRejectReason("");
+        }}
+        title="Tolak Pembayaran"
+        size="md"
+        responsive
+        footerClassName="flex-col sm:flex-row"
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setShowRejectModal(false);
+                setRejectReason("");
+              }}
+              className="flex-1"
+            >
+              Batal
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() =>
+                handleRejectPayment(
+                  selectedPayment?.pemesanan_id || selectedPayment?.id,
+                  rejectReason,
+                )
+              }
+              className="flex-1"
+            >
+              Tolak Pembayaran
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-slate-600">
+            Berikan alasan penolakan agar pasien memahami status pembayarannya.
+          </p>
+          <textarea
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            rows={3}
+            placeholder="Masukkan alasan penolakan..."
+            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-200"
+          />
+        </div>
+      </Modal>
     </div>
   );
 };
