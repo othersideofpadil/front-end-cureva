@@ -1,6 +1,17 @@
 # Cureva Fisioterapi Frontend
 
-Frontend aplikasi untuk sistem pemesanan layanan homecare fisioterapi Cureva.
+Frontend aplikasi untuk sistem pemesanan layanan homecare fisioterapi Cureva. Aplikasi ini menyediakan alur pasien untuk booking layanan, memantau status pemesanan, menerima notifikasi, serta panel admin untuk mengelola booking, jadwal, pembayaran, pengguna, dan laporan.
+
+## 🧭 Gambaran Aplikasi
+
+Frontend Cureva dibangun sebagai satu aplikasi React yang melayani dua peran utama: pasien dan admin. Pasien fokus pada pencarian layanan, pembuatan booking, notifikasi, dan riwayat layanan. Admin menggunakan dashboard terpusat untuk memantau pemesanan, memperbarui status, melihat statistik, dan mengekspor laporan PDF.
+
+Fokus implementasi frontend saat ini:
+
+- Navigasi berbeda untuk pasien dan admin.
+- Notifikasi real-time di navbar dan halaman notifikasi.
+- Layout admin dengan sidebar, topbar notifikasi, dan halaman manajemen yang terintegrasi.
+- Halaman laporan admin dengan grafik dan export PDF.
 
 ## 🚀 Tech Stack
 
@@ -148,8 +159,8 @@ Aplikasi akan berjalan di `http://localhost:5173`
 | `/admin/layanan`  | Manage services      |
 | `/admin/jadwal`   | Manage schedules     |
 | `/admin/payments` | Manage payments      |
+| `/admin/ratings`  | Manage ratings       |
 | `/admin/reports`  | Reports & statistics |
-| `/admin/settings` | App settings         |
 
 ## 🧩 Components
 
@@ -175,6 +186,14 @@ Aplikasi akan berjalan di `http://localhost:5173`
 | `Navbar`         | Navigation bar                       |
 | `Sidebar`        | Side navigation                      |
 | `ProtectedRoute` | Route guard untuk auth               |
+
+## ✨ Fitur Frontend Utama
+
+- Landing page dengan section layanan, fisioterapis, ulasan, dan CTA.
+- Booking flow untuk pasien dengan validasi slot dan detail layanan.
+- Notification drawer/list dengan badge unread dan realtime update via socket.
+- Admin dashboard dengan sidebar navigasi, preview notifikasi, dan halaman manajemen.
+- Halaman reports admin yang menampilkan statistik operasional dan export PDF.
 
 ## 🔐 Authentication
 
@@ -247,6 +266,10 @@ toast.loading("Memproses...");
 
 Navbar menampilkan jumlah notifikasi yang belum dibaca dengan badge merah.
 
+### Admin Notification Preview
+
+Di layout admin, ikon bell membuka panel preview notifikasi yang bisa ditutup dengan klik di luar panel atau tombol Escape. Item notifikasi admin mengarahkan ke halaman pemesanan untuk memudahkan tindak lanjut.
+
 ## 📊 Status Booking
 
 | Status                | Badge Color | Description                   |
@@ -260,6 +283,10 @@ Navbar menampilkan jumlah notifikasi yang belum dibaca dengan badge merah.
 | `ditolak`             | Red         | Booking ditolak               |
 | `dibatalkan_pasien`   | Gray        | Dibatalkan oleh pasien        |
 | `dibatalkan_sistem`   | Gray        | Dibatalkan oleh sistem        |
+
+## 📄 Reports & Export
+
+Halaman `/admin/reports` menampilkan ringkasan performa bisnis, grafik pendapatan, booking terbaru, dan tombol export PDF untuk mengunduh laporan langsung dari browser.
 
 ## ⭐ Rating System
 

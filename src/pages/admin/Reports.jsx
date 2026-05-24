@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import {
   TrendingUp,
   Calendar,
@@ -36,6 +38,7 @@ const Reports = () => {
   const [payments, setPayments] = useState([]);
   const [recentBookings, setRecentBookings] = useState([]);
   const [dateRange, setDateRange] = useState("month");
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -87,6 +90,16 @@ const Reports = () => {
       day: "numeric",
       month: "short",
       year: "numeric",
+    });
+  };
+
+  const formatDateTime = (dateStr) => {
+    return new Date(dateStr).toLocaleString("id-ID", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -218,6 +231,148 @@ const Reports = () => {
     return buckets.map(({ name, revenue }) => ({ name, revenue }));
   };
 
+  const handleExportPdf = async () => {
+    setExporting(true);
+
+    try {
+      const doc = new jsPDF("p", "mm", "a4");
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 14;
+
+      const title = "Laporan Cureva";
+      const subtitle = `Periode: ${
+        dateRange === "week"
+          ? "7 Hari"
+          : dateRange === "year"
+            ? "Tahun Ini"
+            : "30 Hari"
+      } | Grafik: ${
+        chartPeriod === "daily"
+          ? "Harian"
+          : chartPeriod === "weekly"
+            ? "Mingguan"
+            : "Bulanan"
+      }`;
+      const generatedAt = `Dicetak pada ${formatDateTime(new Date())}`;
+
+      doc.setFillColor(3, 60, 130);
+      doc.rect(0, 0, pageWidth, 28, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.text(title, margin, 12);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.text(subtitle, margin, 18);
+      doc.text(generatedAt, margin, 24);
+
+      let cursorY = 38;
+
+      const summaryCards = [
+        ["Total Pendapatan", formatPrice(overview.total_pendapatan)],
+        ["Total Booking", String(overview.total_pemesanan || 0)],
+        ["Total Pengguna", String(overview.total_users || 0)],
+        ["Layanan Aktif", String(overview.total_layanan || 0)],
+        ["Booking Menunggu", String(overview.menunggu || 0)],
+        ["Booking Selesai", String(overview.selesai || 0)],
+        ["Booking Dibatalkan", String(overview.dibatalkan || 0)],
+        ["Booking Hari Ini", String(overview.booking_hari_ini || 0)],
+      ];
+
+      autoTable(doc, {
+        startY: cursorY,
+        margin: { left: margin, right: margin },
+        head: [["Ringkasan", "Nilai"]],
+        body: summaryCards,
+        theme: "grid",
+        styles: {
+          fontSize: 9,
+          cellPadding: 2,
+          valign: "middle",
+        },
+        headStyles: {
+          fillColor: [15, 23, 42],
+          textColor: 255,
+        },
+        alternateRowStyles: {
+          fillColor: [248, 250, 252],
+        },
+      });
+
+      cursorY = doc.lastAutoTable.finalY + 10;
+
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(15, 23, 42);
+      doc.setFontSize(12);
+      doc.text("Pendapatan", margin, cursorY);
+      cursorY += 4;
+
+      autoTable(doc, {
+        startY: cursorY,
+        margin: { left: margin, right: margin },
+        head: [["Periode", "Pendapatan"]],
+        body: revenueData.map((item) => [item.name, formatPrice(item.revenue)]),
+        theme: "grid",
+        styles: {
+          fontSize: 9,
+          cellPadding: 2,
+        },
+        headStyles: {
+          fillColor: [14, 165, 233],
+          textColor: 255,
+        },
+      });
+
+      cursorY = doc.lastAutoTable.finalY + 10;
+
+      if (recentBookings.length > 0) {
+        if (cursorY > pageHeight - 60) {
+          doc.addPage();
+          cursorY = 18;
+        }
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+        doc.text("Booking Terbaru", margin, cursorY);
+        cursorY += 4;
+
+        autoTable(doc, {
+          startY: cursorY,
+          margin: { left: margin, right: margin },
+          head: [["Kode", "Pasien", "Layanan", "Tanggal", "Status"]],
+          body: recentBookings
+            .slice(0, 10)
+            .map((booking) => [
+              booking.kode_booking || "-",
+              booking.nama_pasien || booking.nama_user || "-",
+              booking.nama_layanan || "-",
+              formatDate(booking.tanggal),
+              booking.status || "-",
+            ]),
+          theme: "grid",
+          styles: {
+            fontSize: 8,
+            cellPadding: 2,
+          },
+          headStyles: {
+            fillColor: [34, 197, 94],
+            textColor: 255,
+          },
+        });
+      }
+
+      const fileName = `laporan-cureva-${dateRange}-${new Date()
+        .toISOString()
+        .slice(0, 10)}.pdf`;
+      doc.save(fileName);
+    } catch (error) {
+      console.error("Failed to export report PDF:", error);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (loading) {
     return <LoadingSpinner fullScreen />;
   }
@@ -256,7 +411,13 @@ const Reports = () => {
             <option value="month">30 Hari</option>
             <option value="year">Tahun Ini</option>
           </select>
-          <Button variant="secondary" leftIcon={Download} size="sm">
+          <Button
+            variant="secondary"
+            leftIcon={Download}
+            size="sm"
+            onClick={handleExportPdf}
+            loading={exporting}
+          >
             Export
           </Button>
         </div>

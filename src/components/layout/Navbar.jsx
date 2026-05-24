@@ -78,6 +78,14 @@ const Navbar = ({ isLandingPage = false, unreadCountProp = null }) => {
     navigate("/login");
   };
 
+  const resolveAvatarSrc = (avatarUrl) => {
+    if (!avatarUrl) return "";
+    if (avatarUrl.startsWith("http")) return avatarUrl;
+    return avatarUrl.startsWith("/") ? avatarUrl : `/${avatarUrl}`;
+  };
+
+  const avatarSrc = resolveAvatarSrc(user?.avatar_url);
+
   const isAdmin = user?.role === "admin";
 
   // Nav links tampil di desktop
@@ -209,9 +217,17 @@ const Navbar = ({ isLandingPage = false, unreadCountProp = null }) => {
                         isLandingPage
                           ? "bg-linear-to-br from-sky-400 to-indigo-500"
                           : "bg-linear-to-br from-sky-400 to-indigo-400"
-                      } rounded-full flex items-center justify-center text-white font-semibold text-sm shrink-0`}
+                      } rounded-full flex items-center justify-center text-white font-semibold text-sm shrink-0 overflow-hidden`}
                     >
-                      {user?.nama?.charAt(0).toUpperCase() || "U"}
+                      {avatarSrc ? (
+                        <img
+                          src={avatarSrc}
+                          alt={user?.nama || "Avatar pengguna"}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        user?.nama?.charAt(0).toUpperCase() || "U"
+                      )}
                     </div>
                     <span
                       className={`hidden sm:block font-medium truncate ${
@@ -248,13 +264,26 @@ const Navbar = ({ isLandingPage = false, unreadCountProp = null }) => {
                           }`}
                         >
                           {/* Info user */}
-                          <div className="px-4 py-3 border-b border-slate-100">
-                            <p className="font-semibold text-slate-800 truncate text-sm">
-                              {user?.nama}
-                            </p>
-                            <p className="text-xs text-slate-500 truncate mt-0.5">
-                              {user?.email}
-                            </p>
+                          <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full overflow-hidden bg-linear-to-br from-sky-400 to-indigo-400 flex items-center justify-center text-white font-semibold shrink-0">
+                              {avatarSrc ? (
+                                <img
+                                  src={avatarSrc}
+                                  alt={user?.nama || "Avatar pengguna"}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                user?.nama?.charAt(0).toUpperCase() || "U"
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-semibold text-slate-800 truncate text-sm">
+                                {user?.nama}
+                              </p>
+                              <p className="text-xs text-slate-500 truncate mt-0.5">
+                                {user?.email}
+                              </p>
+                            </div>
                           </div>
 
                           {/* Menu items */}

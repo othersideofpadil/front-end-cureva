@@ -9,9 +9,11 @@ import { Button, Input, Card } from "../../components/common";
 const ForgotPassword = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
+  const [canResendVerification, setCanResendVerification] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -29,12 +31,35 @@ const ForgotPassword = () => {
     try {
       await authService.forgotPassword(email);
       setSent(true);
+      setCanResendVerification(false);
       toast.success("Instruksi reset password telah dikirim ke email Anda");
+    } catch (error) {
+      const message = error.response?.data?.message || "Gagal mengirim email";
+      const status = error.response?.status;
+
+      setCanResendVerification(status === 403);
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!email) {
+      toast.error("Email wajib diisi");
+      return;
+    }
+
+    setResendLoading(true);
+    try {
+      await authService.resendVerificationEmail(email);
+      toast.success("Email verifikasi telah dikirim ulang");
+      setCanResendVerification(false);
     } catch (error) {
       const message = error.response?.data?.message || "Gagal mengirim email";
       toast.error(message);
     } finally {
-      setLoading(false);
+      setResendLoading(false);
     }
   };
 
@@ -111,10 +136,29 @@ const ForgotPassword = () => {
                 onChange={(e) => {
                   setEmail(e.target.value);
                   setError("");
+                  setCanResendVerification(false);
                 }}
                 error={error}
                 leftIcon={Mail}
               />
+
+              {canResendVerification && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+                  Email belum terverifikasi. Kirim ulang email verifikasi untuk
+                  melanjutkan.
+                  <div className="mt-3">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      loading={resendLoading}
+                      onClick={handleResendVerification}
+                    >
+                      Kirim Ulang Verifikasi
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               <Button type="submit" fullWidth size="lg" loading={loading}>
                 Kirim Instruksi

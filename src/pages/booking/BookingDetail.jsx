@@ -352,7 +352,7 @@ const BookingDetail = () => {
                   <SectionTitle>Informasi Layanan</SectionTitle>
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-sky-50 flex items-center justify-center shrink-0">
-                      <FileText className="w-6 h-6 sm:w-7 sm:h-7 text-sky-400" />
+                      <img src={booking.gambar_url} alt={booking.nama_layanan} className="w-full h-full object-cover rounded-xl" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-slate-800 text-sm sm:text-base truncate">

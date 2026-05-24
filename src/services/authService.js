@@ -38,7 +38,10 @@ const authService = {
 
   // Update profile
   updateProfile: async (data) => {
-    const response = await api.put("/auth/profile", data);
+    const isFormData = data instanceof FormData;
+    const response = await api.put("/auth/profile", data, {
+      headers: isFormData ? { "Content-Type": "multipart/form-data" } : {},
+    });
     return response.data;
   },
 
@@ -54,6 +57,12 @@ const authService = {
   // Forgot password
   forgotPassword: async (email) => {
     const response = await api.post("/auth/forgot-password", { email });
+    return response.data;
+  },
+
+  // Resend verification email
+  resendVerificationEmail: async (email) => {
+    const response = await api.post("/auth/resend-verification", { email });
     return response.data;
   },
 

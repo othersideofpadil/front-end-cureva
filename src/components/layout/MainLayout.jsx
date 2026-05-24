@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Menu, X, Bell } from "lucide-react";
@@ -18,6 +18,8 @@ const MainLayout = ({ children, showSidebar = true }) => {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewItems, setPreviewItems] = useState([]);
+  const previewPanelRef = useRef(null);
+  const previewButtonRef = useRef(null);
 
   useEffect(() => {
     const handleResize = () => {
@@ -29,6 +31,36 @@ const MainLayout = ({ children, showSidebar = true }) => {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (!previewOpen) return;
+
+      const target = event.target;
+      const clickedPanel = previewPanelRef.current?.contains(target);
+      const clickedButton = previewButtonRef.current?.contains(target);
+
+      if (!clickedPanel && !clickedButton) {
+        setPreviewOpen(false);
+      }
+    };
+
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        setPreviewOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("touchstart", handleOutsideClick);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("touchstart", handleOutsideClick);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [previewOpen]);
 
   useEffect(() => {
     if (isAuthenticated && isAdmin) {
@@ -171,6 +203,7 @@ const MainLayout = ({ children, showSidebar = true }) => {
                 <div className="relative">
                   <button
                     type="button"
+                    ref={previewButtonRef}
                     onClick={togglePreview}
                     className="relative inline-flex items-center justify-center w-9 h-9 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
                   >
@@ -184,72 +217,67 @@ const MainLayout = ({ children, showSidebar = true }) => {
 
                   <AnimatePresence>
                     {previewOpen && (
-                      <>
-                        <div
-                          className="fixed inset-0 z-10"
-                          onClick={() => setPreviewOpen(false)}
-                        />
-                        <motion.div
-                          initial={{ opacity: 0, y: 8, scale: 0.98 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: 8, scale: 0.98 }}
-                          transition={{ duration: 0.15 }}
-                          className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white border border-slate-100 rounded-2xl shadow-lg z-20 overflow-hidden"
-                        >
-                          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-                            <div>
-                              <p className="text-sm font-semibold text-slate-800">
-                                Notifikasi
-                              </p>
-                              <p className="text-xs text-slate-400">
-                                {unreadCount > 0
-                                  ? `${unreadCount} belum dibaca`
-                                  : "Semua sudah dibaca"}
-                              </p>
-                            </div>
-                            <Link
-                              to="/notifications"
-                              onClick={() => setPreviewOpen(false)}
-                              className="text-xs font-semibold text-sky-600 hover:text-sky-700"
-                            >
-                              Lihat semua
-                            </Link>
+                      <motion.div
+                        ref={previewPanelRef}
+                        initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white border border-slate-100 rounded-2xl shadow-lg z-20 overflow-hidden"
+                      >
+                        <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-slate-800">
+                              Notifikasi
+                            </p>
+                            <p className="text-xs text-slate-400">
+                              {unreadCount > 0
+                                ? `${unreadCount} belum dibaca`
+                                : "Semua sudah dibaca"}
+                            </p>
                           </div>
+                          <Link
+                            to="/notifications"
+                            onClick={() => setPreviewOpen(false)}
+                            className="text-xs font-semibold text-sky-600 hover:text-sky-700"
+                          >
+                            Lihat semua
+                          </Link>
+                        </div>
 
-                          <div className="max-h-80 overflow-y-auto">
-                            {previewLoading ? (
-                              <div className="px-4 py-6 text-center text-xs text-slate-400">
-                                Memuat notifikasi...
-                              </div>
-                            ) : previewItems.length === 0 ? (
-                              <div className="px-4 py-6 text-center text-xs text-slate-400">
-                                Belum ada notifikasi
-                              </div>
-                            ) : (
-                              previewItems.map((item) => (
-                                <Link
-                                  key={item.id}
-                                  to={item.link || "/notifications"}
-                                  onClick={() => setPreviewOpen(false)}
-                                  className={`block px-4 py-3 border-b border-slate-100 last:border-b-0 hover:bg-slate-50 transition-colors ${
-                                    item.is_read ? "" : "bg-sky-50/40"
-                                  }`}
-                                >
-                                  <p className="text-sm font-medium text-slate-800 line-clamp-1">
-                                    {item.judul}
-                                  </p>
-                                  <p className="text-xs text-slate-500 line-clamp-2 mt-1">
-                                    {item.pesan}
-                                  </p>
-                                  <p className="text-[11px] text-slate-400 mt-2">
-                                    {formatTime(item.created_at)}
-                                  </p>
-                                </Link>
-                              ))
-                            )}
-                          </div>
-                        </motion.div>
-                      </>
+                        <div className="max-h-80 overflow-y-auto">
+                          {previewLoading ? (
+                            <div className="px-4 py-6 text-center text-xs text-slate-400">
+                              Memuat notifikasi...
+                            </div>
+                          ) : previewItems.length === 0 ? (
+                            <div className="px-4 py-6 text-center text-xs text-slate-400">
+                              Belum ada notifikasi
+                            </div>
+                          ) : (
+                            previewItems.map((item) => (
+                              <Link
+                                key={item.id}
+                                to="/admin/bookings"
+                                onClick={() => setPreviewOpen(false)}
+                                className={`block px-4 py-3 border-b border-slate-100 last:border-b-0 hover:bg-slate-50 transition-colors ${
+                                  item.is_read ? "" : "bg-sky-50/40"
+                                }`}
+                              >
+                                <p className="text-sm font-medium text-slate-800 line-clamp-1">
+                                  {item.judul}
+                                </p>
+                                <p className="text-xs text-slate-500 line-clamp-2 mt-1">
+                                  {item.pesan}
+                                </p>
+                                <p className="text-[11px] text-slate-400 mt-2">
+                                  {formatTime(item.created_at)}
+                                </p>
+                              </Link>
+                            ))
+                          )}
+                        </div>
+                      </motion.div>
                     )}
                   </AnimatePresence>
                 </div>
