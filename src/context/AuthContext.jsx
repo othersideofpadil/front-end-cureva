@@ -63,6 +63,17 @@ export const AuthProvider = ({ children }) => {
     return response;
   };
 
+  const googleLogin = async (idToken) => {
+    const response = await authService.googleLogin(idToken);
+    setUser(response.data.user);
+    setIsAuthenticated(true);
+
+    const token = localStorage.getItem("accessToken");
+    connectSocket(token);
+
+    return response;
+  };
+
   const register = async (data) => {
     const response = await authService.register(data);
     return response;
@@ -75,6 +86,10 @@ export const AuthProvider = ({ children }) => {
       console.error("Logout error:", error);
     } finally {
       disconnectSocket();
+      // Cancel Google session jika ada
+      if (window.google?.accounts?.id) {
+        window.google.accounts.id.disableAutoSelect();
+      }
       setUser(null);
       setIsAuthenticated(false);
     }
@@ -118,6 +133,7 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     isAdmin: user?.role === "admin",
     login,
+    googleLogin,
     register,
     logout,
     updateProfile,

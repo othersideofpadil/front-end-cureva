@@ -128,7 +128,7 @@ const Navbar = ({ isLandingPage = false, unreadCountProp = null }) => {
               className="w-10 h-10 rounded-xl"
             />
             <span
-              className={`text-xl font-bold ${
+              className={`hidden sm:inline text-xl font-bold ${
                 isLandingPage
                   ? "bg-linear-to-r text-primary-dark bg-clip-text"
                   : "text-slate-800"
@@ -193,6 +193,19 @@ const Navbar = ({ isLandingPage = false, unreadCountProp = null }) => {
                 <Link
                   to="/notifications"
                   className="relative hidden md:flex items-center justify-center w-9 h-9 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                >
+                  <Bell className="w-5 h-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  )}
+                </Link>
+
+                {/* Notifikasi Bell — mobile */}
+                <Link
+                  to="/notifications"
+                  className="relative md:hidden flex items-center justify-center w-9 h-9 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
                 >
                   <Bell className="w-5 h-5" />
                   {unreadCount > 0 && (
@@ -362,6 +375,13 @@ const Navbar = ({ isLandingPage = false, unreadCountProp = null }) => {
                 <button
                   onClick={() => navigate("/login?redirect=%2Fnotifications")}
                   className="relative hidden md:flex items-center justify-center w-9 h-9 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                  title="Login untuk melihat notifikasi"
+                >
+                  <Bell className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => navigate("/login?redirect=%2Fnotifications")}
+                  className="relative md:hidden flex items-center justify-center w-9 h-9 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
                   title="Login untuk melihat notifikasi"
                 >
                   <Bell className="w-5 h-5" />

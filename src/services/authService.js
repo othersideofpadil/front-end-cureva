@@ -19,6 +19,21 @@ const authService = {
     return response.data;
   },
 
+  // Google Login
+  googleLogin: async (idToken) => {
+    const response = await api.post("/auth/google", { idToken });
+
+    // Sama seperti login biasa - simpan token ke localStorage
+    if (response.data.data) {
+      const { accessToken, refreshToken, user } = response.data.data;
+      if (accessToken) localStorage.setItem("accessToken", accessToken);
+      if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
+      if (user) localStorage.setItem("user", JSON.stringify(user));
+    }
+
+    return response.data;
+  },
+
   // Logout
   logout: async () => {
     try {

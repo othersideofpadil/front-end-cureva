@@ -86,10 +86,10 @@ const bookingService = {
   },
 
   // Admin: Update booking status
-  updateStatus: async (id, status, alasan = "") => {
+  updateStatus: async (id, status, payload = {}) => {
     const response = await api.put(`/bookings/${id}/status`, {
       status,
-      alasan_penolakan: alasan,
+      ...payload,
     });
     return response.data;
   },

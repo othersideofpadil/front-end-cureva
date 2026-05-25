@@ -139,7 +139,7 @@ const FooterSection = ({ layanan }) => {
         {/* ── Bottom bar ── */}
         <div className="mt-12 pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
           <p>© {year} Cureva. All rights reserved.</p>
-          <p>Layanan homecare fisioterapi terpercaya di Indonesia</p>
+          <p>Layanan homecare fisioterapi terpercaya Se-JABODETABEK</p>
         </div>
       </div>
     </footer>

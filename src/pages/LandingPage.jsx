@@ -147,13 +147,20 @@ const LandingPage = () => {
     }).format(price);
   };
 
+  const activeLayanan = layanan.filter((item) => item.is_active);
+
+  const averageRating = ratings.length
+    ? ratings.reduce((sum, item) => sum + (item.rating || 0), 0) /
+      ratings.length
+    : 4.9;
+
   return (
     <div className="min-h-screen bg-white">
       {/* Navbar - menggunakan komponen reusable */}
       <Navbar isLandingPage={true} unreadCountProp={unreadCount} />
 
       {/* Sections */}
-      <HeroSection isAuthenticated={isAuthenticated} />
+      <HeroSection isAuthenticated={isAuthenticated} rating={averageRating} />
       <FisioterapisSection />
       <ServicesSection
         layanan={layanan}
@@ -178,7 +185,7 @@ const LandingPage = () => {
         handleSubmitReview={handleSubmitReview}
       />
       <CTASection isAuthenticated={isAuthenticated} />
-      <FooterSection layanan={layanan} />
+      <FooterSection layanan={activeLayanan} />
     </div>
   );
 };

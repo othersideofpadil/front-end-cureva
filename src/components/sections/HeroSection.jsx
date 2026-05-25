@@ -2,7 +2,9 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 
-const HeroSection = ({ isAuthenticated }) => {
+const HeroSection = ({ isAuthenticated, rating }) => {
+  const displayRating = Number.isFinite(rating) ? rating.toFixed(1) : "4.9";
+
   return (
     <section className="pt-28 pb-16 px-4 sm:px-6 lg:px-8 overflow-hidden">
       <div className="max-w-7xl mx-auto">
@@ -23,7 +25,7 @@ const HeroSection = ({ isAuthenticated }) => {
                 Abbad Al Wafi, Amd. Kes, CDNP.
               </strong>{" "}
               seorang fisioterapis yang berpengalaman dan tersertifikasi.
-              Nikmati perawatan berkualitas langsung di rumah Anda.
+              Tidak perlu datang ke klinik, kami hadir untuk memberikan kenyamanan dan hasil terbaik bagi pemulihan Anda.
             </p>
 
             {/* CTA buttons */}
@@ -71,7 +73,7 @@ const HeroSection = ({ isAuthenticated }) => {
               <div className="w-px h-10 bg-slate-200" />
               <div>
                 <p className="text-2xl sm:text-3xl font-bold text-slate-900">
-                  4.9
+                  {displayRating}
                 </p>
                 <p className="text-slate-500 text-sm">Rating</p>
               </div>

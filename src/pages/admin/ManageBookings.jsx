@@ -276,6 +276,7 @@ const ManageBookings = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [newStatus, setNewStatus] = useState("");
   const [alasan, setAlasan] = useState("");
+  const [catatanAdmin, setCatatanAdmin] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
@@ -357,6 +358,7 @@ const ManageBookings = () => {
     setSelectedBooking(booking);
     setNewStatus(presetStatus);
     setAlasan("");
+    setCatatanAdmin("");
     setShowStatusModal(true);
   };
 
@@ -372,15 +374,28 @@ const ManageBookings = () => {
       toast.error("Alasan wajib diisi");
       return;
     }
+    if (newStatus === "selesai" && !catatanAdmin.trim()) {
+      toast.error("Catatan progres wajib diisi");
+      return;
+    }
     setActionLoading(true);
     try {
-      await bookingService.updateStatus(selectedBooking.id, newStatus, alasan);
+      const payload = {};
+      if (["ditolak", "dibatalkan_sistem"].includes(newStatus)) {
+        payload.alasan_penolakan = alasan.trim();
+      }
+      if (newStatus === "selesai") {
+        payload.catatan_admin = catatanAdmin.trim();
+      }
+
+      await bookingService.updateStatus(selectedBooking.id, newStatus, payload);
       toast.success("Status berhasil diperbarui");
       fetchBookings();
       setShowStatusModal(false);
       setSelectedBooking(null);
       setNewStatus("");
       setAlasan("");
+      setCatatanAdmin("");
     } catch (e) {
       toast.error(e.response?.data?.message || "Gagal memperbarui status");
     } finally {
@@ -643,6 +658,14 @@ const ManageBookings = () => {
               </InfoBlock>
             )}
 
+            {selectedBooking.catatan_admin && (
+              <InfoBlock icon={FileText} label="Catatan Progres">
+                <p className="text-sm text-slate-700 leading-relaxed">
+                  {selectedBooking.catatan_admin}
+                </p>
+              </InfoBlock>
+            )}
+
             <div className="flex items-center justify-between pt-2 mt-1 border-t border-slate-100">
               <span className="text-sm text-slate-500 font-medium">
                 Total Biaya
@@ -664,6 +687,7 @@ const ManageBookings = () => {
           setSelectedBooking(null);
           setNewStatus("");
           setAlasan("");
+          setCatatanAdmin("");
         }}
         title={
           <div>
@@ -687,6 +711,7 @@ const ManageBookings = () => {
                 setShowStatusModal(false);
                 setNewStatus("");
                 setAlasan("");
+                setCatatanAdmin("");
               }}
               className="flex-1"
             >
@@ -746,6 +771,22 @@ const ManageBookings = () => {
                     ? "Masukkan alasan penolakan…"
                     : "Masukkan alasan pembatalan…"
                 }
+                className="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent transition resize-none"
+              />
+            </div>
+          )}
+
+          {newStatus === "selesai" && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                Catatan Progres untuk Pasien
+                <span className="text-red-400 ml-0.5">*</span>
+              </label>
+              <textarea
+                value={catatanAdmin}
+                onChange={(e) => setCatatanAdmin(e.target.value)}
+                rows={3}
+                placeholder="Tuliskan hasil atau pengingat dari fisioterapis…"
                 className="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent transition resize-none"
               />
             </div>

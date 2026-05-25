@@ -384,11 +384,9 @@ const AdminDashboard = () => {
   const handleQuickReject = async (booking) => {
     setActionLoading(true);
     try {
-      await bookingService.updateStatus(
-        booking.id,
-        "ditolak",
-        "Ditolak oleh admin",
-      );
+      await bookingService.updateStatus(booking.id, "ditolak", {
+        alasan_penolakan: "Ditolak oleh admin",
+      });
       toast.success("Booking ditolak");
       fetchDashboardData();
     } catch (e) {
