@@ -26,6 +26,12 @@ const steps = [
   { id: 4, title: "Konfirmasi", label: "Konfirmasi", icon: Check },
 ];
 
+const formatPrice = (value) =>
+  Number(value || 0).toLocaleString("id-ID", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
+
 /* ─── Reusable styled pill badge ─── */
 const StatusBadge = ({ label, className }) => (
   <span
@@ -334,7 +340,7 @@ const CreateBooking = () => {
                           <span
                             className={`text-base font-extrabold ${selected ? "text-sky-600" : "text-sky-500"}`}
                           >
-                            Rp {item.harga?.toLocaleString("id-ID")}
+                            Rp. {formatPrice(item.harga)}
                           </span>
                           <span className="flex items-center gap-1 text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded-lg">
                             <Clock className="w-3 h-3" />
@@ -614,7 +620,11 @@ const CreateBooking = () => {
                     </p>
                     <div className="flex items-center gap-3 mt-1">
                       <span className="text-lg font-bold text-sky-500">
-                        Rp {selectedLayanan?.harga?.toLocaleString("id-ID")}
+                        Rp.{" "}
+                        {selectedLayanan?.harga?.toLocaleString("id-ID", {
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 0,
+                        })}
                       </span>
                       <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
                         {selectedLayanan?.durasi} mnt
@@ -661,7 +671,11 @@ const CreateBooking = () => {
                       Total Pembayaran
                     </span>
                     <span className="text-2xl font-bold text-sky-500">
-                      Rp {selectedLayanan?.harga?.toLocaleString("id-ID")}
+                      Rp.{" "}
+                      {selectedLayanan?.harga?.toLocaleString("id-ID", {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0,
+                      })}
                     </span>
                   </div>
                 </div>

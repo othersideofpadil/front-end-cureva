@@ -622,7 +622,11 @@ const ManageBookings = () => {
               </p>
               {selectedBooking.harga_layanan && (
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Rp {selectedBooking.harga_layanan?.toLocaleString("id-ID")}
+                  Rp.{" "}
+                  {Number(selectedBooking.harga_layanan || 0).toLocaleString(
+                    "id-ID",
+                    { minimumFractionDigits: 0, maximumFractionDigits: 0 },
+                  )}
                 </p>
               )}
             </InfoBlock>
@@ -671,8 +675,11 @@ const ManageBookings = () => {
                 Total Biaya
               </span>
               <span className="text-xl font-bold text-sky-600">
-                Rp{" "}
-                {(selectedBooking.harga_layanan || 0).toLocaleString("id-ID")}
+                Rp.{" "}
+                {Number(selectedBooking.harga_layanan || 0).toLocaleString(
+                  "id-ID",
+                  { minimumFractionDigits: 0, maximumFractionDigits: 0 },
+                )}
               </span>
             </div>
           </div>

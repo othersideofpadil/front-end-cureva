@@ -55,7 +55,11 @@ const getBufferTimes = (slots) => {
   return bufferTimes;
 };
 
-const formatPrice = (val) => `Rp ${(val || 0).toLocaleString("id-ID")}`;
+const formatPrice = (val) =>
+  `Rp. ${Number(val || 0).toLocaleString("id-ID", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  })}`;
 
 /* ── reusable info row ── */
 const InfoRow = ({ label, value, valueClass = "" }) => (
@@ -352,7 +356,11 @@ const BookingDetail = () => {
                   <SectionTitle>Informasi Layanan</SectionTitle>
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-sky-50 flex items-center justify-center shrink-0">
-                      <img src={booking.gambar_url} alt={booking.nama_layanan} className="w-full h-full object-cover rounded-xl" />
+                      <img
+                        src={booking.gambar_url}
+                        alt={booking.nama_layanan}
+                        className="w-full h-full object-cover rounded-xl"
+                      />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-slate-800 text-sm sm:text-base truncate">

@@ -41,11 +41,10 @@ const formatDate = (dateStr) =>
 const formatTime = (t) => t?.slice(0, 5) || "";
 
 const formatCurrency = (value) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
+  `Rp. ${Number(value || 0).toLocaleString("id-ID", {
     minimumFractionDigits: 0,
-  }).format(value);
+    maximumFractionDigits: 0,
+  })}`;
 
 /* ─── Status helpers (same as ManageBookings) ─────────────────── */
 const STATUS_META = {
@@ -788,7 +787,11 @@ const AdminDashboard = () => {
               </p>
               {selectedBooking.harga_layanan && (
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Rp {selectedBooking.harga_layanan?.toLocaleString("id-ID")}
+                  Rp.{" "}
+                  {Number(selectedBooking.harga_layanan || 0).toLocaleString(
+                    "id-ID",
+                    { minimumFractionDigits: 0, maximumFractionDigits: 0 },
+                  )}
                 </p>
               )}
             </InfoBlock>
@@ -829,8 +832,11 @@ const AdminDashboard = () => {
                 Total Biaya
               </span>
               <span className="text-xl font-bold text-sky-600">
-                Rp{" "}
-                {(selectedBooking.harga_layanan || 0).toLocaleString("id-ID")}
+                Rp.{" "}
+                {Number(selectedBooking.harga_layanan || 0).toLocaleString(
+                  "id-ID",
+                  { minimumFractionDigits: 0, maximumFractionDigits: 0 },
+                )}
               </span>
             </div>
           </div>

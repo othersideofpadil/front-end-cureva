@@ -92,7 +92,11 @@ const BookingList = () => {
 
   const formatTime = (timeStr) => timeStr?.slice(0, 5) || "";
 
-  const formatPrice = (price) => `Rp ${(price || 0).toLocaleString("id-ID")}`;
+  const formatPrice = (price) =>
+    `Rp. ${Number(price || 0).toLocaleString("id-ID", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    })}`;
 
   const activeFilterLabel =
     statusOptions.find((o) => o.value === statusFilter)?.label ||
