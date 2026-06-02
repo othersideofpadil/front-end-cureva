@@ -1,188 +1,14 @@
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  Calendar,
-  ChevronLeft,
-  ChevronRight,
-  Edit2,
-  Lock,
-  Plus,
-  Unlock,
-  AlertCircle,
-  Trash2,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  CalendarOff,
-  Bookmark,
-} from "lucide-react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { jadwalService } from "../../services";
+import { LoadingSpinner } from "../../components/common";
 import {
-  Card,
-  Button,
-  LoadingSpinner,
-  Modal,
-  Input,
-} from "../../components/common";
-
-/* ─── Status helpers ──────────────────────────────────────────────── */
-const STATUS_CONFIG = {
-  tersedia: {
-    label: "Tersedia",
-    icon: CheckCircle2,
-    bg: "bg-emerald-50",
-    text: "text-emerald-700",
-    border: "border-emerald-200",
-    dot: "bg-emerald-400",
-  },
-  dipesan: {
-    label: "Terpesan",
-    icon: Bookmark,
-    bg: "bg-sky-50",
-    text: "text-sky-700",
-    border: "border-sky-200",
-    dot: "bg-sky-400",
-  },
-  diblock_admin: {
-    label: "Diblokir",
-    icon: XCircle,
-    bg: "bg-red-50",
-    text: "text-red-700",
-    border: "border-red-200",
-    dot: "bg-red-400",
-  },
-  libur: {
-    label: "Libur",
-    icon: CalendarOff,
-    bg: "bg-slate-50",
-    text: "text-slate-500",
-    border: "border-slate-200",
-    dot: "bg-slate-300",
-  },
-};
-
-const SlotCard = ({ slot, pastSlot, onBlock, onUnblock, onEdit, onDelete }) => {
-  const cfg = STATUS_CONFIG[slot.status] ?? STATUS_CONFIG.tersedia;
-  const Icon = cfg.icon;
-  const isEditable =
-    !pastSlot && slot.status !== "dipesan" && slot.status !== "libur";
-  const isDeletable = !pastSlot && slot.status !== "dipesan";
-
-  const formatTime = (t) => t?.slice(0, 5) ?? "";
-
-  return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      transition={{ duration: 0.18 }}
-      className={`relative rounded-2xl border ${cfg.border} ${cfg.bg} p-4 flex flex-col gap-3 ${
-        pastSlot ? "opacity-50" : ""
-      }`}
-    >
-      {/* Time */}
-      <div className="flex items-center gap-1.5">
-        <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-        <span className="font-semibold text-slate-800 text-base leading-none">
-          {formatTime(slot.waktu_mulai)}
-        </span>
-      </div>
-      {/* Status badge — own row so it never clips */}
-      <span
-        className={`self-start inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium whitespace-nowrap ${cfg.bg} ${cfg.text} border ${cfg.border}`}
-      >
-        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${cfg.dot}`} />
-        {cfg.label}
-      </span>
-
-      {/* Booking code */}
-      {slot.kode_booking && (
-        <p className="text-xs text-slate-400 font-mono -mt-1">
-          {slot.kode_booking}
-        </p>
-      )}
-
-      {/* Actions */}
-      <div className="flex items-center gap-1.5 flex-wrap mt-auto pt-1 border-t border-black/5">
-        {slot.status === "tersedia" && (
-          <button
-            onClick={() => onBlock(slot.id)}
-            className="flex items-center gap-1 text-xs text-red-600 hover:bg-red-100 rounded-lg px-2 py-1 transition-colors"
-          >
-            <Lock className="w-3 h-3" />
-            Blokir
-          </button>
-        )}
-        {slot.status === "diblock_admin" && (
-          <button
-            onClick={() => onUnblock(slot.id)}
-            className="flex items-center gap-1 text-xs text-emerald-600 hover:bg-emerald-100 rounded-lg px-2 py-1 transition-colors"
-          >
-            <Unlock className="w-3 h-3" />
-            Buka
-          </button>
-        )}
-        <button
-          onClick={() => onEdit(slot)}
-          disabled={!isEditable}
-          className="flex items-center gap-1 text-xs text-slate-500 hover:bg-white hover:text-slate-700 rounded-lg px-2 py-1 transition-colors disabled:opacity-40 disabled:pointer-events-none"
-        >
-          <Edit2 className="w-3 h-3" />
-          Edit
-        </button>
-        <button
-          onClick={() => onDelete(slot)}
-          disabled={!isDeletable}
-          className="flex items-center gap-1 text-xs text-red-500 hover:bg-red-50 rounded-lg px-2 py-1 transition-colors disabled:opacity-40 disabled:pointer-events-none"
-        >
-          <Trash2 className="w-3 h-3" />
-          Hapus
-        </button>
-      </div>
-    </motion.div>
-  );
-};
-
-/* ─── Summary strip ───────────────────────────────────────────────── */
-const SlotSummary = ({ slots }) => {
-  const counts = slots.reduce((acc, s) => {
-    acc[s.status] = (acc[s.status] ?? 0) + 1;
-    return acc;
-  }, {});
-
-  const items = [
-    {
-      key: "tersedia",
-      label: "Tersedia",
-      color: "text-emerald-600 bg-emerald-50",
-    },
-    { key: "dipesan", label: "Terpesan", color: "text-sky-600 bg-sky-50" },
-    {
-      key: "diblock_admin",
-      label: "Diblokir",
-      color: "text-red-500 bg-red-50",
-    },
-    { key: "libur", label: "Libur", color: "text-slate-500 bg-slate-100" },
-  ].filter((i) => counts[i.key]);
-
-  if (!items.length) return null;
-
-  return (
-    <div className="flex flex-wrap gap-2 mb-4">
-      {items.map((i) => (
-        <span
-          key={i.key}
-          className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${i.color}`}
-        >
-          <span className="font-bold">{counts[i.key]}</span>
-          {i.label}
-        </span>
-      ))}
-    </div>
-  );
-};
+  DeleteSlotModal,
+  JadwalCalendar,
+  JadwalHeader,
+  SlotFormModal,
+  SlotsPanel,
+} from "./components/jadwal";
 
 /* ─── Main component ──────────────────────────────────────────────── */
 const ManageJadwal = () => {
@@ -265,6 +91,15 @@ const ManageJadwal = () => {
       fetchSlots(date);
     } catch {
       toast.error("Gagal membatalkan libur");
+    }
+  };
+
+  const handleToggleHoliday = () => {
+    if (!selectedDate) return;
+    if (isSelectedHoliday) {
+      handleCancelHoliday(selectedDate);
+    } else {
+      handleSetHoliday(selectedDate);
     }
   };
 
@@ -386,7 +221,6 @@ const ManageJadwal = () => {
     }
   };
 
-  /* ── Calendar helpers ── */
   const getDaysInMonth = (date) => {
     const year = date.getFullYear();
     const month = date.getMonth();
@@ -425,7 +259,7 @@ const ManageJadwal = () => {
   const isSelectedHoliday =
     selectedDate &&
     slots.length > 0 &&
-    slots.every((s) => s.status === "libur");
+    slots.every((slot) => slot.status === "libur");
   const canManageDate = selectedDate && !isPastDate(selectedDate);
 
   const selectedDateFormatted = selectedDate
@@ -441,379 +275,61 @@ const ManageJadwal = () => {
 
   return (
     <div className="space-y-6 pb-8">
-      {/* ── Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">
-            Kelola Jadwal
-          </h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            Atur jadwal slot praktik fisioterapis
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="secondary"
-            onClick={handleOpenCreate}
-            leftIcon={Plus}
-            disabled={!canManageDate}
-            size="sm"
-          >
-            Tambah Slot
-          </Button>
-        </div>
-      </div>
+      <JadwalHeader canManageDate={canManageDate} onCreate={handleOpenCreate} />
 
-      {/* ── Main grid ── */}
       <div className="grid grid-cols-1 xl:grid-cols-[380px_1fr] gap-6">
-        {/* ── Calendar card ── */}
-        <Card className="self-start">
-          {/* Month nav */}
-          <div className="flex items-center justify-between mb-5">
-            <button
-              onClick={prevMonth}
-              className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              <ChevronLeft className="w-4 h-4 text-slate-500" />
-            </button>
-            <span className="text-sm font-semibold text-slate-700 capitalize">
-              {monthYear}
-            </span>
-            <button
-              onClick={nextMonth}
-              className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              <ChevronRight className="w-4 h-4 text-slate-500" />
-            </button>
-          </div>
+        <JadwalCalendar
+          monthYear={monthYear}
+          days={getDaysInMonth(currentMonth)}
+          selectedDate={selectedDate}
+          selectedDateFormatted={selectedDateFormatted}
+          isSelectedHoliday={isSelectedHoliday}
+          onPrevMonth={prevMonth}
+          onNextMonth={nextMonth}
+          onSelectDate={setSelectedDate}
+          onToggleHoliday={handleToggleHoliday}
+        />
 
-          {/* Day labels */}
-          <div className="grid grid-cols-7 mb-1">
-            {["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"].map((d) => (
-              <div
-                key={d}
-                className="text-center text-[11px] font-medium text-slate-400 py-1.5"
-              >
-                {d}
-              </div>
-            ))}
-          </div>
-
-          {/* Date cells */}
-          <div className="grid grid-cols-7 gap-0.5">
-            {getDaysInMonth(currentMonth).map((item, idx) => (
-              <button
-                key={idx}
-                disabled={!item.day}
-                onClick={() => item.date && setSelectedDate(item.date)}
-                className={[
-                  "aspect-square flex items-center justify-center rounded-xl text-xs font-medium transition-all select-none",
-                  !item.day ? "invisible" : "",
-                  item.isSelected
-                    ? "bg-sky-500 text-white shadow-sm shadow-sky-200"
-                    : item.isToday
-                      ? "ring-2 ring-sky-400 ring-offset-1 text-sky-600 font-semibold"
-                      : item.isPast
-                        ? "text-slate-300 cursor-default"
-                        : "text-slate-700 hover:bg-slate-100",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-              >
-                {item.day}
-              </button>
-            ))}
-          </div>
-
-          {/* Selected date info */}
-          <div className="mt-5 pt-4 border-t border-slate-100">
-            {selectedDate ? (
-              <div className="space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="text-[11px] uppercase tracking-wider text-slate-400 font-medium">
-                      Tanggal Dipilih
-                    </p>
-                    <p className="text-sm font-semibold text-slate-800 mt-0.5 capitalize leading-snug">
-                      {selectedDateFormatted}
-                    </p>
-                  </div>
-                  <Calendar className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
-                </div>
-
-                {/* Holiday toggle */}
-                <button
-                  onClick={() =>
-                    isSelectedHoliday
-                      ? handleCancelHoliday(selectedDate)
-                      : handleSetHoliday(selectedDate)
-                  }
-                  className={[
-                    "w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold transition-all",
-                    isSelectedHoliday
-                      ? "bg-slate-800 text-white hover:bg-slate-700"
-                      : "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100",
-                  ].join(" ")}
-                >
-                  <CalendarOff className="w-3.5 h-3.5" />
-                  {isSelectedHoliday
-                    ? "Batalkan Hari Libur"
-                    : "Tandai Hari Libur"}
-                </button>
-              </div>
-            ) : (
-              <p className="text-xs text-slate-400 text-center py-1">
-                Pilih tanggal di kalender
-              </p>
-            )}
-          </div>
-        </Card>
-
-        {/* ── Slots panel ── */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25 }}
-        >
-          <Card className="min-h-90 flex flex-col">
-            {/* Panel header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
-              <div>
-                <h3 className="text-base font-semibold text-slate-800">
-                  Slot Waktu
-                </h3>
-                {selectedDate && (
-                  <p className="text-xs text-slate-500 mt-0.5 capitalize">
-                    {selectedDateFormatted}
-                  </p>
-                )}
-              </div>
-              {selectedDate && (
-                <button
-                  onClick={() =>
-                    isSelectedHoliday
-                      ? handleCancelHoliday(selectedDate)
-                      : handleSetHoliday(selectedDate)
-                  }
-                  className={[
-                    "self-start sm:self-auto flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl transition-all border",
-                    isSelectedHoliday
-                      ? "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"
-                      : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100",
-                  ].join(" ")}
-                >
-                  <CalendarOff className="w-3.5 h-3.5" />
-                  {isSelectedHoliday ? "Batalkan Libur" : "Tandai Libur"}
-                </button>
-              )}
-            </div>
-
-            {/* Content */}
-            {!selectedDate ? (
-              <div className="flex-1 flex flex-col items-center justify-center gap-3 py-16 text-slate-400">
-                <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-slate-300" />
-                </div>
-                <p className="text-sm">Pilih tanggal untuk melihat slot</p>
-              </div>
-            ) : slotsLoading ? (
-              <div className="flex-1 flex items-center justify-center py-16">
-                <LoadingSpinner />
-              </div>
-            ) : slots.length > 0 ? (
-              <>
-                <SlotSummary slots={slots} />
-                <AnimatePresence>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                    {slots.map((slot) => (
-                      <SlotCard
-                        key={slot.id}
-                        slot={slot}
-                        pastSlot={
-                          isPastDate(selectedDate) ||
-                          isPastSlot(selectedDate, formatTime(slot.waktu_mulai))
-                        }
-                        onBlock={handleBlockSlot}
-                        onUnblock={handleUnblockSlot}
-                        onEdit={handleOpenEdit}
-                        onDelete={handleConfirmDelete}
-                      />
-                    ))}
-                  </div>
-                </AnimatePresence>
-              </>
-            ) : (
-              <div className="flex-1 flex flex-col items-center justify-center gap-4 py-16 text-slate-400">
-                <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center">
-                  <AlertCircle className="w-6 h-6 text-slate-300" />
-                </div>
-                <div className="text-center">
-                  <p className="text-sm font-medium text-slate-500">
-                    Belum ada slot
-                  </p>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Belum ada slot untuk tanggal ini
-                  </p>
-                </div>
-                <Button size="sm" onClick={handleOpenCreate} leftIcon={Plus}>
-                  Tambah Slot
-                </Button>
-              </div>
-            )}
-          </Card>
-        </motion.div>
+        <SlotsPanel
+          selectedDate={selectedDate}
+          selectedDateFormatted={selectedDateFormatted}
+          isSelectedHoliday={isSelectedHoliday}
+          slots={slots}
+          slotsLoading={slotsLoading}
+          onToggleHoliday={handleToggleHoliday}
+          onOpenCreate={handleOpenCreate}
+          onBlock={handleBlockSlot}
+          onUnblock={handleUnblockSlot}
+          onEdit={handleOpenEdit}
+          onDelete={handleConfirmDelete}
+          isPastDate={isPastDate}
+          isPastSlot={isPastSlot}
+          formatTime={formatTime}
+        />
       </div>
 
-      {/* ── Form Modal ── */}
-      <Modal
+      <SlotFormModal
         isOpen={showFormModal}
+        editingSlot={editingSlot}
+        formData={formData}
+        canManageDate={canManageDate}
+        submitting={submitting}
+        onChange={handleFormChange}
         onClose={handleCloseForm}
-        title={editingSlot ? "Edit Slot" : "Tambah Slot Baru"}
-        footer={
-          <>
-            <Button
-              variant="ghost"
-              onClick={handleCloseForm}
-              disabled={submitting}
-            >
-              Batal
-            </Button>
-            <Button
-              type="submit"
-              form="slot-form"
-              loading={submitting}
-              disabled={!canManageDate}
-            >
-              Simpan
-            </Button>
-          </>
-        }
-      >
-        <form id="slot-form" onSubmit={handleSubmitSlot} className="space-y-4">
-          <Input
-            label="Tanggal"
-            type="date"
-            name="tanggal"
-            value={formData.tanggal}
-            onChange={handleFormChange}
-            disabled
-          />
+        onSubmit={handleSubmitSlot}
+      />
 
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="Waktu Mulai"
-              type="time"
-              name="waktu_mulai"
-              value={formData.waktu_mulai}
-              onChange={handleFormChange}
-              disabled={!!editingSlot}
-              required={!editingSlot}
-            />
-            <Input
-              label="Waktu Selesai"
-              type="time"
-              name="waktu_selesai"
-              value={formData.waktu_selesai}
-              onChange={handleFormChange}
-              disabled={!!editingSlot}
-              required={!editingSlot}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-slate-700">
-              Status
-            </label>
-            <select
-              name="status"
-              value={formData.status}
-              onChange={handleFormChange}
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition"
-            >
-              <option value="tersedia">Tersedia</option>
-              <option value="diblock_admin">Diblokir</option>
-              <option value="libur">Libur</option>
-            </select>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-slate-700">
-              Keterangan{" "}
-              <span className="text-slate-400 font-normal">(opsional)</span>
-            </label>
-            <textarea
-              name="keterangan"
-              value={formData.keterangan}
-              onChange={handleFormChange}
-              rows={3}
-              placeholder="Tambahkan catatan jika diperlukan..."
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition resize-none"
-            />
-          </div>
-
-          {!canManageDate && (
-            <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 border border-amber-100">
-              <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-              <p className="text-xs text-amber-700">
-                Slot hanya bisa dibuat untuk tanggal hari ini atau setelahnya.
-              </p>
-            </div>
-          )}
-        </form>
-      </Modal>
-
-      {/* ── Delete Modal ── */}
-      <Modal
+      <DeleteSlotModal
         isOpen={showDeleteModal}
         onClose={() => {
           setShowDeleteModal(false);
           setDeletingSlot(null);
         }}
-        title="Hapus Slot"
-        footer={
-          <>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setShowDeleteModal(false);
-                setDeletingSlot(null);
-              }}
-              disabled={submitting}
-            >
-              Batal
-            </Button>
-            <Button
-              variant="danger"
-              onClick={handleDeleteSlot}
-              loading={submitting}
-            >
-              Hapus
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-3">
-          <p className="text-sm text-slate-500">
-            Slot ini akan dihapus secara permanen dan tidak dapat dikembalikan.
-          </p>
-          {deletingSlot && (
-            <div className="flex items-center gap-3 p-3.5 rounded-xl bg-red-50 border border-red-100">
-              <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
-                <Clock className="w-4 h-4 text-red-500" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-800">
-                  {formatTime(deletingSlot.waktu_mulai)} —{" "}
-                  {formatTime(deletingSlot.waktu_selesai)}
-                </p>
-                <p className="text-xs text-slate-400">
-                  {deletingSlot.tanggal} · {deletingSlot.status}
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-      </Modal>
+        onConfirm={handleDeleteSlot}
+        submitting={submitting}
+        deletingSlot={deletingSlot}
+        formatTime={formatTime}
+      />
     </div>
   );
 };

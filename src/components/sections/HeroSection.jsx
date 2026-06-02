@@ -24,8 +24,10 @@ const HeroSection = ({ isAuthenticated, rating }) => {
               <strong className="text-primary font-semibold">
                 Abbad Al Wafi, Amd. Kes, CDNP.
               </strong>{" "}
-              seorang fisioterapis yang berpengalaman dan tersertifikasi.
-              Tidak perlu datang ke klinik, kami hadir untuk memberikan kenyamanan dan hasil terbaik bagi pemulihan Anda.
+              seorang fisioterapis yang berpengalaman dan tersertifikasi. Tidak
+              perlu datang ke klinik, kami hadir untuk memberikan kenyamanan dan
+              hasil terbaik bagi pemulihan Anda. Berpraktik di klinik dan
+              melayani homecare di wilayah Tangerang, Jakarta dan Depok.
             </p>
 
             {/* CTA buttons */}

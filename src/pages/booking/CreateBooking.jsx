@@ -18,6 +18,7 @@ import {
 import toast from "react-hot-toast";
 import { bookingService, layananService, jadwalService } from "../../services";
 import { Card, Button, Input, LoadingSpinner } from "../../components/common";
+import { useAuth } from "../../context/AuthContext";
 
 const steps = [
   { id: 1, title: "Layanan", label: "Pilih Layanan", icon: FileText },
@@ -43,6 +44,7 @@ const StatusBadge = ({ label, className }) => (
 
 const CreateBooking = () => {
   const navigate = useNavigate();
+  const { startBookingSubmit, endBookingSubmit } = useAuth();
   const [searchParams] = useSearchParams();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -204,11 +206,14 @@ const CreateBooking = () => {
 
   const handleSubmit = async () => {
     setSubmitting(true);
+    startBookingSubmit();
     try {
       const response = await bookingService.create(formData);
       toast.success("Booking berhasil dibuat!");
+      endBookingSubmit();
       navigate(`/bookings/${response.data.id}`);
     } catch (error) {
+      endBookingSubmit();
       toast.error(error.response?.data?.message || "Gagal membuat booking");
     } finally {
       setSubmitting(false);
@@ -620,11 +625,7 @@ const CreateBooking = () => {
                     </p>
                     <div className="flex items-center gap-3 mt-1">
                       <span className="text-lg font-bold text-sky-500">
-                        Rp.{" "}
-                        {selectedLayanan?.harga?.toLocaleString("id-ID", {
-                          minimumFractionDigits: 0,
-                          maximumFractionDigits: 0,
-                        })}
+                        Rp. {formatPrice(selectedLayanan?.harga)}
                       </span>
                       <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
                         {selectedLayanan?.durasi} mnt
@@ -671,11 +672,7 @@ const CreateBooking = () => {
                       Total Pembayaran
                     </span>
                     <span className="text-2xl font-bold text-sky-500">
-                      Rp.{" "}
-                      {selectedLayanan?.harga?.toLocaleString("id-ID", {
-                        minimumFractionDigits: 0,
-                        maximumFractionDigits: 0,
-                      })}
+                      Rp. {formatPrice(selectedLayanan?.harga)}
                     </span>
                   </div>
                 </div>

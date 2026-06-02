@@ -300,8 +300,7 @@ const FisioterapisSection = () => {
                   <p className="text-sm text-slate-500 leading-relaxed mt-2 mb-5">
                     Lulusan D3 Fisioterapi dengan pengalaman lebih dari 3 tahun
                     menangani kasus muskuloskeletal, nyeri punggung, cedera
-                    olahraga, dan gangguan gerak. Berpraktik di klinik dan
-                    melayani homecare di wilayah Tangerang, Jakarta dan Depok.
+                    olahraga, dan gangguan gerak.
                   </p>
 
                   {/* Grid info — 2 kolom di semua ukuran, teks lebih fleksibel */}

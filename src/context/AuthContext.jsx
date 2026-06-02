@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useRef } from "react";
 import { authService } from "../services";
 import {
   connectSocket,
@@ -20,6 +20,8 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const isBookingSubmitting = useRef(false);
+  const pendingNotifications = useRef([]);
 
   useEffect(() => {
     checkAuth();
@@ -107,6 +109,11 @@ export const AuthProvider = ({ children }) => {
     }
 
     const handleNewNotification = (notification) => {
+      if (isBookingSubmitting.current) {
+        pendingNotifications.current.push(notification);
+        return;
+      }
+
       window.dispatchEvent(
         new CustomEvent("notification:new", { detail: notification }),
       );
@@ -127,6 +134,28 @@ export const AuthProvider = ({ children }) => {
     return response;
   };
 
+  const startBookingSubmit = () => {
+    isBookingSubmitting.current = true;
+    pendingNotifications.current = [];
+  };
+
+  const endBookingSubmit = () => {
+    isBookingSubmitting.current = false;
+
+    // Dispatch semua notifikasi yang tertahan selama submit
+    const pending = pendingNotifications.current.splice(0);
+    pending.forEach((notification) => {
+      window.dispatchEvent(
+        new CustomEvent("notification:new", { detail: notification }),
+      );
+    });
+
+    // Update badge unread count sekali saja setelah flush
+    if (pending.length > 0) {
+      window.dispatchEvent(new Event("notificationUpdate"));
+    }
+  };
+
   const value = {
     user,
     loading,
@@ -138,6 +167,8 @@ export const AuthProvider = ({ children }) => {
     logout,
     updateProfile,
     checkAuth,
+    startBookingSubmit,
+    endBookingSubmit,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import useGoogleAuth from "../../hooks/useGoogleAuth";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -28,48 +29,11 @@ const Register = () => {
   });
   const [errors, setErrors] = useState({});
 
-  // ─── Load Google Identity Services script ───────────────────────
-  useEffect(() => {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    if (!clientId) return;
-
-    if (document.getElementById("gsi-script")) {
-      initGSI();
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.id = "gsi-script";
-    script.src = "https://accounts.google.com/gsi/client";
-    script.async = true;
-    script.defer = true;
-    script.onload = () => initGSI();
-    document.head.appendChild(script);
-  }, []);
-
-  const initGSI = () => {
-    if (!window.google?.accounts?.id) {
-      setTimeout(initGSI, 200);
-      return;
-    }
-    window.google.accounts.id.initialize({
-      client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-      callback: handleGoogleCallback,
-    });
-  };
-
-  // ─── Handler setelah user pilih akun Google ──────────────────────
-  const handleGoogleCallback = async (response) => {
-    if (!response.credential) {
-      toast.error("Daftar dengan Google gagal. Coba lagi.");
-      return;
-    }
-
+  const handleGoogleCredential = async (idToken) => {
     setGoogleLoading(true);
     try {
-      const result = await googleLogin(response.credential);
+      const result = await googleLogin(idToken);
       toast.success("Berhasil daftar & masuk dengan Google! 🎉");
-
       const user = result.data.user;
       navigate(user.role === "admin" ? "/admin" : "/");
     } catch (error) {
@@ -79,20 +43,7 @@ const Register = () => {
     }
   };
 
-  // ─── Klik tombol Google ──────────────────────────────────────────
-  const handleGoogleClick = () => {
-    if (!import.meta.env.VITE_GOOGLE_CLIENT_ID) {
-      toast.error("Google login belum dikonfigurasi");
-      return;
-    }
-    if (window.google?.accounts?.id) {
-      window.google.accounts.id.prompt((notification) => {
-        if (notification.isNotDisplayed()) {
-          toast.error("Popup Google diblokir browser. Coba izinkan popup.");
-        }
-      });
-    }
-  };
+  const { triggerGoogleLogin } = useGoogleAuth(handleGoogleCredential);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -370,7 +321,7 @@ const Register = () => {
               {/* Google Register Button - sekarang berfungsi */}
               <button
                 type="button"
-                onClick={handleGoogleClick}
+                onClick={triggerGoogleLogin}
                 disabled={googleLoading}
                 className="w-full flex items-center justify-center gap-3 px-4 py-3 border-2 border-slate-200 rounded-xl hover:border-slate-300 hover:bg-slate-50 transition-all duration-200 group cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
