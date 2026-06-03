@@ -4,7 +4,7 @@ import { MainLayout, ProtectedRoute } from "./components/layout";
 import LoadingSpinner from "./components/common/LoadingSpinner";
 import LandingPage from "./pages/LandingPage";
 
-// Semua file sudah punya export default — tidak perlu .then()
+// lazy load pages buat user
 const Login = lazy(() => import("./pages/auth/Login"));
 const Register = lazy(() => import("./pages/auth/Register"));
 const ForgotPassword = lazy(() => import("./pages/auth/ForgotPassword"));
@@ -18,6 +18,7 @@ const Layanan = lazy(() => import("./pages/layanan/Layanan"));
 const Jadwal = lazy(() => import("./pages/jadwal/Jadwal"));
 const Ratings = lazy(() => import("./pages/ratings/Ratings"));
 
+// lazy load pages buat admin
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const ManageBookings = lazy(() => import("./pages/admin/ManageBookings"));
 const ManageUsers = lazy(() => import("./pages/admin/ManageUsers"));
