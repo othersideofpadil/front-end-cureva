@@ -1,37 +1,65 @@
+import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { MainLayout, ProtectedRoute } from "./components/layout";
-import {
-  LandingPage,
-  Login,
-  Register,
-  ForgotPassword,
-  Dashboard,
-  BookingList,
-  BookingDetail,
-  CreateBooking,
-  Profile,
-  Notifications,
-  Layanan,
-  Jadwal,
-  Ratings,
-  AdminDashboard,
-  ManageBookings,
-  ManageUsers,
-  ManageLayanan,
-  ManageJadwal,
-  ManagePayments,
-  ManageRatings,
-  Reports,
-} from "./pages";
+import LoadingSpinner from "./components/common/LoadingSpinner";
+import LandingPage from "./pages/LandingPage";
+
+// Semua file sudah punya export default — tidak perlu .then()
+const Login = lazy(() => import("./pages/auth/Login"));
+const Register = lazy(() => import("./pages/auth/Register"));
+const ForgotPassword = lazy(() => import("./pages/auth/ForgotPassword"));
+const Dashboard = lazy(() => import("./pages/dashboard/Dashboard"));
+const BookingList = lazy(() => import("./pages/booking/BookingList"));
+const BookingDetail = lazy(() => import("./pages/booking/BookingDetail"));
+const CreateBooking = lazy(() => import("./pages/booking/CreateBooking"));
+const Profile = lazy(() => import("./pages/profile/Profile"));
+const Notifications = lazy(() => import("./pages/notifications/Notifications"));
+const Layanan = lazy(() => import("./pages/layanan/Layanan"));
+const Jadwal = lazy(() => import("./pages/jadwal/Jadwal"));
+const Ratings = lazy(() => import("./pages/ratings/Ratings"));
+
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const ManageBookings = lazy(() => import("./pages/admin/ManageBookings"));
+const ManageUsers = lazy(() => import("./pages/admin/ManageUsers"));
+const ManageLayanan = lazy(() => import("./pages/admin/ManageLayanan"));
+const ManageJadwal = lazy(() => import("./pages/admin/ManageJadwal"));
+const ManagePayments = lazy(() => import("./pages/admin/ManagePayments"));
+const ManageRatings = lazy(() => import("./pages/admin/ManageRatings"));
+const Reports = lazy(() => import("./pages/admin/Reports"));
+
+const Page = ({ children }) => (
+  <Suspense fallback={<LoadingSpinner fullScreen />}>{children}</Suspense>
+);
 
 function App() {
   return (
     <Routes>
       {/* Public Routes */}
       <Route path="/" element={<LandingPage />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route
+        path="/login"
+        element={
+          <Page>
+            <Login />
+          </Page>
+        }
+      />
+      <Route
+        path="/register"
+        element={
+          <Page>
+            <Register />
+          </Page>
+        }
+      />
+      <Route
+        path="/forgot-password"
+        element={
+          <Page>
+            <ForgotPassword />
+          </Page>
+        }
+      />
 
       {/* Protected Routes */}
       <Route
@@ -39,7 +67,9 @@ function App() {
         element={
           <ProtectedRoute>
             <MainLayout>
-              <Dashboard />
+              <Page>
+                <Dashboard />
+              </Page>
             </MainLayout>
           </ProtectedRoute>
         }
@@ -51,7 +81,9 @@ function App() {
         element={
           <ProtectedRoute disallowAdmin>
             <MainLayout>
-              <BookingList />
+              <Page>
+                <BookingList />
+              </Page>
             </MainLayout>
           </ProtectedRoute>
         }
@@ -61,7 +93,9 @@ function App() {
         element={
           <ProtectedRoute disallowAdmin>
             <MainLayout>
-              <CreateBooking />
+              <Page>
+                <CreateBooking />
+              </Page>
             </MainLayout>
           </ProtectedRoute>
         }
@@ -71,7 +105,9 @@ function App() {
         element={
           <ProtectedRoute disallowAdmin>
             <MainLayout>
-              <BookingDetail />
+              <Page>
+                <BookingDetail />
+              </Page>
             </MainLayout>
           </ProtectedRoute>
         }
@@ -83,19 +119,23 @@ function App() {
         element={
           <ProtectedRoute>
             <MainLayout>
-              <Layanan />
+              <Page>
+                <Layanan />
+              </Page>
             </MainLayout>
           </ProtectedRoute>
         }
       />
 
-      {/* Jadwal Fisioterapis */}
+      {/* Jadwal */}
       <Route
         path="/jadwal"
         element={
           <ProtectedRoute>
             <MainLayout>
-              <Jadwal />
+              <Page>
+                <Jadwal />
+              </Page>
             </MainLayout>
           </ProtectedRoute>
         }
@@ -107,7 +147,9 @@ function App() {
         element={
           <ProtectedRoute>
             <MainLayout>
-              <Ratings />
+              <Page>
+                <Ratings />
+              </Page>
             </MainLayout>
           </ProtectedRoute>
         }
@@ -119,7 +161,9 @@ function App() {
         element={
           <ProtectedRoute>
             <MainLayout>
-              <Profile />
+              <Page>
+                <Profile />
+              </Page>
             </MainLayout>
           </ProtectedRoute>
         }
@@ -131,7 +175,9 @@ function App() {
         element={
           <ProtectedRoute>
             <MainLayout>
-              <Notifications />
+              <Page>
+                <Notifications />
+              </Page>
             </MainLayout>
           </ProtectedRoute>
         }
@@ -143,7 +189,9 @@ function App() {
         element={
           <ProtectedRoute adminOnly>
             <MainLayout>
-              <AdminDashboard />
+              <Page>
+                <AdminDashboard />
+              </Page>
             </MainLayout>
           </ProtectedRoute>
         }
@@ -153,7 +201,9 @@ function App() {
         element={
           <ProtectedRoute adminOnly>
             <MainLayout>
-              <ManageBookings />
+              <Page>
+                <ManageBookings />
+              </Page>
             </MainLayout>
           </ProtectedRoute>
         }
@@ -163,7 +213,9 @@ function App() {
         element={
           <ProtectedRoute adminOnly>
             <MainLayout>
-              <BookingDetail />
+              <Page>
+                <BookingDetail />
+              </Page>
             </MainLayout>
           </ProtectedRoute>
         }
@@ -173,7 +225,9 @@ function App() {
         element={
           <ProtectedRoute adminOnly>
             <MainLayout>
-              <ManageUsers />
+              <Page>
+                <ManageUsers />
+              </Page>
             </MainLayout>
           </ProtectedRoute>
         }
@@ -183,7 +237,9 @@ function App() {
         element={
           <ProtectedRoute adminOnly>
             <MainLayout>
-              <ManageLayanan />
+              <Page>
+                <ManageLayanan />
+              </Page>
             </MainLayout>
           </ProtectedRoute>
         }
@@ -193,7 +249,9 @@ function App() {
         element={
           <ProtectedRoute adminOnly>
             <MainLayout>
-              <ManageJadwal />
+              <Page>
+                <ManageJadwal />
+              </Page>
             </MainLayout>
           </ProtectedRoute>
         }
@@ -203,7 +261,9 @@ function App() {
         element={
           <ProtectedRoute adminOnly>
             <MainLayout>
-              <ManagePayments />
+              <Page>
+                <ManagePayments />
+              </Page>
             </MainLayout>
           </ProtectedRoute>
         }
@@ -213,7 +273,9 @@ function App() {
         element={
           <ProtectedRoute adminOnly>
             <MainLayout>
-              <ManageRatings />
+              <Page>
+                <ManageRatings />
+              </Page>
             </MainLayout>
           </ProtectedRoute>
         }
@@ -223,7 +285,9 @@ function App() {
         element={
           <ProtectedRoute adminOnly>
             <MainLayout>
-              <Reports />
+              <Page>
+                <Reports />
+              </Page>
             </MainLayout>
           </ProtectedRoute>
         }
