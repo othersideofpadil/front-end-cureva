@@ -9,6 +9,7 @@ import {
   LayananSearch,
   LayananStats,
 } from "./components/layanan";
+import DeleteLayananModal from "./components/layanan/DeleteLayananModal";
 
 const emptyForm = {
   nama: "",
@@ -30,6 +31,9 @@ const ManageLayanan = () => {
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
   const [formData, setFormData] = useState(emptyForm);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedLayanan, setSelectedLayanan] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     fetchLayanan();
@@ -126,6 +130,27 @@ const ManageLayanan = () => {
     }
   };
 
+  const handleDeleteClick = (item) => {
+    setSelectedLayanan(item);
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedLayanan) return;
+    setDeleteLoading(true);
+    try {
+      await layananService.delete(selectedLayanan.id);
+      toast.success("Layanan berhasil dihapus");
+      fetchLayanan();
+      setShowDeleteModal(false);
+      setSelectedLayanan(null);
+    } catch {
+      toast.error("Gagal menghapus layanan");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   const handleToggleActive = async (item) => {
     try {
       await layananService.update(item.id, { is_active: !item.is_active });
@@ -135,17 +160,6 @@ const ManageLayanan = () => {
       fetchLayanan();
     } catch {
       toast.error("Gagal mengubah status layanan");
-    }
-  };
-
-  const handleDelete = async (item) => {
-    if (!window.confirm(`Hapus layanan "${item.nama}"?`)) return;
-    try {
-      await layananService.delete(item.id);
-      toast.success("Layanan berhasil dihapus");
-      fetchLayanan();
-    } catch {
-      toast.error("Gagal menghapus layanan");
     }
   };
 
@@ -176,7 +190,7 @@ const ManageLayanan = () => {
         searchQuery={searchQuery}
         onEdit={handleOpenModal}
         onToggle={handleToggleActive}
-        onDelete={handleDelete}
+        onDelete={handleDeleteClick}
         onAdd={() => handleOpenModal()}
       />
 
@@ -190,6 +204,17 @@ const ManageLayanan = () => {
         onChange={handleChange}
         onSubmit={handleSubmit}
         submitting={submitting}
+      />
+
+      <DeleteLayananModal
+        isOpen={showDeleteModal}
+        selectedLayanan={selectedLayanan}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setSelectedLayanan(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        actionLoading={deleteLoading}
       />
     </div>
   );
