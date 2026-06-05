@@ -421,6 +421,20 @@ const BookingDetail = () => {
                 </div>
               </motion.div>
 
+              {/* Catatan Tambahan */}
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
+                  <SectionTitle>Catatan Tambahan</SectionTitle>
+                  <p className="text-sm text-slate-600 leading-relaxed">
+                    {booking.catatan_tambahan || "-"}
+                  </p>
+                </div>
+              </motion.div>
+
               {/* Rating (if exists) */}
               {booking.rating && (
                 <motion.div

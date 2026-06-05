@@ -59,6 +59,7 @@ const CreateBooking = () => {
     alamat: "",
     koordinat: "",
     keluhan: "",
+    catatan_tambahan: "",
     metode_pembayaran: "cash_on_visit",
   });
   const [selectedLayanan, setSelectedLayanan] = useState(null);
@@ -194,6 +195,7 @@ const CreateBooking = () => {
     if (currentStep === 3) {
       if (!formData.alamat.trim()) newErrors.alamat = "Alamat wajib diisi";
       if (!formData.keluhan.trim()) newErrors.keluhan = "Keluhan wajib diisi";
+      if (!formData.catatan_tambahan.trim()) newErrors.catatan_tambahan = "Catatan tambahan wajib diisi";
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -548,6 +550,21 @@ const CreateBooking = () => {
                 </FormCard>
 
                 <FormCard>
+                  <FieldLabel label="Catatan Tambahan" optional />
+                  <textarea
+                    name="catatan_tambahan"
+                    value={formData.catatan_tambahan}
+                    onChange={handleChange}
+                    rows={3}
+                    placeholder="Tambahkan catatan penting tentang kunjungan Anda..."
+                    className={`w-full px-4 py-3 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 resize-none bg-slate-50 focus:bg-white transition-all ${
+                      errors.catatan_tambahan ? "border-red-300" : "border-slate-200"
+                    }`}
+                  />
+                  {errors.catatan_tambahan && <ErrMsg msg={errors.catatan_tambahan} />}
+                </FormCard>
+
+                <FormCard>
                   <FieldLabel label="Metode Pembayaran" />
                   <div className="grid grid-cols-2 gap-3">
                     {[
@@ -654,6 +671,11 @@ const CreateBooking = () => {
                       icon={<FileText className="w-4 h-4 text-sky-400" />}
                       label="Keluhan"
                       value={formData.keluhan}
+                    />
+                    <SummaryRow
+                      icon={<FileText className="w-4 h-4 text-sky-400" />}
+                      label="Catatan Tambahan"
+                      value={formData.catatan_tambahan}
                     />
                     <SummaryRow
                       icon={<CreditCard className="w-4 h-4 text-sky-400" />}
