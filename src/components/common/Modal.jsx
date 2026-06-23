@@ -1,6 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
-import Button from "./Button";
 
 const Modal = ({
   isOpen,
@@ -27,7 +26,7 @@ const Modal = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex flex-col">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -37,12 +36,8 @@ const Modal = ({
             className="fixed inset-0 bg-black/50 backdrop-blur-sm"
           />
 
-          {/* Modal */}
-          <div
-            className={`flex min-h-full justify-center p-4 ${
-              responsive ? "items-end md:items-center" : "items-center"
-            }`}
-          >
+          {/* Modal wrapper — selalu center */}
+          <div className="relative flex h-full w-full items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -50,16 +45,17 @@ const Modal = ({
               transition={{ duration: 0.2 }}
               className={`
                 relative w-full ${sizes[size]}
-                bg-white shadow-2xl overflow-hidden
-                ${responsive ? "rounded-t-3xl md:rounded-2xl" : "rounded-2xl"}
-                ${responsive ? "flex flex-col max-h-[92dvh] md:max-h-[88vh]" : ""}
+                bg-white shadow-2xl
+                flex flex-col
+                rounded-2xl max-h-[85dvh]
+                overflow-hidden
                 ${contentClassName}
               `}
             >
               {/* Header */}
               {(title || showClose) && (
                 <div
-                  className={`flex items-center justify-between p-6 border-b border-slate-100 ${headerClassName}`}
+                  className={`flex items-center justify-between p-6 border-b border-slate-100 shrink-0 ${headerClassName}`}
                 >
                   {title &&
                     (typeof title === "string" ? (
@@ -82,7 +78,7 @@ const Modal = ({
 
               {/* Body */}
               <div
-                className={`p-6 ${responsive ? "flex-1 overflow-y-auto" : ""} ${bodyClassName}`}
+                className={`p-6 flex-1 overflow-y-auto min-h-0 ${bodyClassName}`}
               >
                 {children}
               </div>
@@ -90,7 +86,7 @@ const Modal = ({
               {/* Footer */}
               {footer && (
                 <div
-                  className={`flex items-center justify-end gap-3 p-6 border-t border-slate-100 bg-slate-50 ${footerClassName}`}
+                  className={`flex items-center justify-end gap-3 p-6 border-t border-slate-100 bg-slate-50 shrink-0 ${footerClassName}`}
                 >
                   {footer}
                 </div>
