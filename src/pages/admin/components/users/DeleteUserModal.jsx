@@ -13,7 +13,7 @@ const DeleteUserModal = ({
     onClose={onClose}
     title="Hapus Pengguna"
     responsive
-    footerClassName="flex-col sm:flex-row"
+    // footerClassName="flex-col sm:flex-row"
     footer={
       <>
         <Button variant="secondary" onClick={onClose}>

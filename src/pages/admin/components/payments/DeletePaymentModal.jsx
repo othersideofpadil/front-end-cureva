@@ -12,7 +12,7 @@ const DeletePaymentModal = ({
     title="Hapus Pembayaran"
     size="md"
     responsive
-    footerClassName="flex-col sm:flex-row"
+    // footerClassName="flex-col sm:flex-row"
     footer={
       <>
         <Button variant="secondary" onClick={onClose} className="flex-1">
