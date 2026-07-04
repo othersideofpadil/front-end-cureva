@@ -34,12 +34,12 @@ export const quickStatsFromData = (stats) => [
 
 export const statCardsFromData = (stats) => [
   {
-    title: "Total Pengguna",
+    title: "Total Pengguna Pasien",
     value: stats.totalUsers,
     icon: Users,
     color: "bg-sky-500",
     lightColor: "bg-sky-50",
-    caption: `Total layanan: ${stats.totalLayanan || 0}`,
+    caption: `Total Admin: ${stats.totalLayanan || 0}`,
     href: "/admin/users",
   },
   {
