@@ -16,7 +16,7 @@ const EditUserModal = ({
     onClose={onClose}
     title="Edit Pengguna"
     responsive
-    footerClassName="flex-col sm:flex-row"
+    // footerClassName="flex-col sm:flex-row"
     footer={
       <>
         <Button variant="secondary" onClick={onClose}>
