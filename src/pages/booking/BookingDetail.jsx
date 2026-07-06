@@ -553,48 +553,6 @@ const BookingDetail = () => {
         </div>
       </div>
 
-      {/* ── Sticky bottom action bar — mobile only ── */}
-      {(canRate || canCancel || canReschedule) && (
-        <div className="sticky bottom-0 z-10 sm:hidden bg-white border-t border-slate-200 px-4 py-3 shadow-lg">
-          <div className="flex gap-2">
-            {canRate && (
-              <Button
-                variant="warning"
-                leftIcon={Star}
-                className="flex-1 justify-center"
-                onClick={() => setShowRatingModal(true)}
-              >
-                Beri Rating
-              </Button>
-            )}
-            {canReschedule && (
-              <Button
-                variant="secondary"
-                leftIcon={RefreshCw}
-                className="flex-1 justify-center"
-                onClick={() => setShowRescheduleModal(true)}
-              >
-                Atur Ulang Jadwal
-              </Button>
-            )}
-            {canCancel && (
-              <Button
-                variant="danger"
-                className="flex-1 justify-center"
-                onClick={() => setShowCancelModal(true)}
-              >
-                Batalkan
-              </Button>
-            )}
-            <Link to="/bookings/new">
-              <Button variant="secondary" leftIcon={RefreshCw}>
-                Booking Lagi
-              </Button>
-            </Link>
-          </div>
-        </div>
-      )}
-
       {/* ── Cancel Modal ── */}
       <Modal
         isOpen={showCancelModal}
